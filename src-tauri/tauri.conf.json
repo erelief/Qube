@@ -1,7 +1,7 @@
 {
-  "productName": "panorama-viewer",
+  "productName": "360 Panorama Viewer",
   "version": "1.0.0",
-  "identifier": "com.panorama.viewer",
+  "identifier": "com.panorama-viewer",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -11,9 +11,13 @@
   "app": {
     "windows": [
       {
-        "title": "Panorama Viewer",
-        "width": 1200,
-        "height": 800
+        "title": "360 Panorama Viewer",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 900,
+        "minHeight": 600,
+        "resizable": true,
+        "center": true
       }
     ],
     "security": {
@@ -27,7 +31,6 @@
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
-      "icons/icon.icns",
       "icons/icon.ico"
     ]
   }
