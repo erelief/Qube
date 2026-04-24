@@ -191,21 +191,13 @@ input[type="range"]::-webkit-slider-thumb {
   background: rgba(0, 0, 0, 0.65);
 }
 
-/* Single-phase shrink/restore — dialog + backdrop in sync */
+/* Single keyframe pair — restore is exact reverse via direction */
 @keyframes shrink-to-corner {
   100% { top: auto; left: auto; bottom: 20px; right: 20px; transform: none; max-width: 220px; width: auto; padding: 10px; opacity: 0.45; }
 }
 
 @keyframes shrink-backdrop {
   100% { background: transparent; }
-}
-
-@keyframes restore-from-center {
-  100% { top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 680px; width: 90%; padding: 24px; opacity: 1; }
-}
-
-@keyframes restore-backdrop {
-  100% { background: rgba(0, 0, 0, 0.65); }
 }
 
 .dialog.unfocused .dialog-content {
@@ -219,12 +211,12 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .dialog.restoring .dialog-content {
-  animation: restore-from-center 0.3s ease forwards;
+  animation: shrink-to-corner 0.3s ease reverse forwards;
   pointer-events: auto;
 }
 
 .dialog.restoring .dialog-backdrop {
-  animation: restore-backdrop 0.3s ease forwards;
+  animation: shrink-backdrop 0.3s ease reverse forwards;
 }
 
 .dialog.unfocused .dialog-content:hover {
