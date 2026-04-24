@@ -191,16 +191,23 @@ input[type="range"]::-webkit-slider-thumb {
   background: rgba(0, 0, 0, 0.65);
 }
 
-/* Semi-transparent + shrunk when unfocused */
+/* Shrunk to bottom-right corner when unfocused */
 .dialog.unfocused .dialog-content {
-  opacity: 0.5;
-  transform: translate(-50%, -50%) scale(0.25);
+  top: auto;
+  left: auto;
+  bottom: 16px;
+  right: 16px;
+  transform: none;
+  opacity: 0.6;
   pointer-events: auto;
   cursor: pointer;
+  max-width: 240px;
+  width: auto;
+  padding: 12px;
 }
 
 .dialog.unfocused .dialog-content:hover {
-  opacity: 0.7;
+  opacity: 0.85;
 }
 
 .dialog.unfocused .dialog-content * {
@@ -209,6 +216,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 .dialog.unfocused .dialog-backdrop {
   background: transparent;
+  pointer-events: none;
 }
 
 /* ===== Export Dialog ===== */
@@ -223,7 +231,7 @@ input[type="range"]::-webkit-slider-thumb {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 24px;
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  transition: all 0.25s ease;
 }
 
 .dialog-close {
