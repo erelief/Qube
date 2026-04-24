@@ -434,21 +434,21 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 /* Screenshot mode: single image centered */
-#preview-grid[data-mode="screenshot"] {
+#preview-grid[data-mode="capture"] {
   grid-template-columns: 1fr;
   justify-items: center;
 }
-#preview-grid[data-mode="screenshot"] .preview-thumb {
+#preview-grid[data-mode="capture"] .preview-thumb {
   max-width: 400px;
   max-height: 300px;
 }
-#preview-grid[data-mode="screenshot"] .preview-download {
+#preview-grid[data-mode="capture"] .preview-download {
   display: none;
 }
-#preview-grid[data-mode="screenshot"] .preview-thumb {
+#preview-grid[data-mode="capture"] .preview-thumb {
   cursor: default;
 }
-#preview-grid[data-mode="screenshot"] .preview-thumb:hover {
+#preview-grid[data-mode="capture"] .preview-thumb:hover {
   border-color: var(--border);
 }
 

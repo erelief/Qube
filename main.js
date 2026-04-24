@@ -17,6 +17,7 @@ const DEFAULT_ASPECT = '1:1';
 let viewer = null;
 let capture = null;
 let capturedImages = null;
+let captureResult = null;
 let cubemapImages = null;
 let dialogMode = null;
 let currentImagePath = null;
@@ -25,7 +26,7 @@ let maskVisible = true;
 
 // DOM elements — toolbar
 const btnOpen = document.getElementById('btn-open');
-const btnScreenshot = document.getElementById('btn-screenshot');
+const btnCapture = document.getElementById('btn-capture');
 const btnCubemap = document.getElementById('btn-cubemap');
 const btnExport = document.getElementById('btn-export');
 const fovSlider = document.getElementById('fov-slider');
@@ -107,9 +108,10 @@ async function loadPanorama(path) {
     currentImagePath = path;
 
     emptyState.classList.add('hidden');
-    btnScreenshot.disabled = false;
+    btnCapture.disabled = false;
     btnCubemap.disabled = true;
     capturedImages = null;
+    captureResult = null;
     cubemapImages = null;
     btnExport.disabled = true;
 
@@ -215,13 +217,13 @@ const viewerResizeObserver = new ResizeObserver(() => {
 });
 viewerResizeObserver.observe(document.getElementById('viewer'));
 
-// --- Screenshot (single view) ---
-btnScreenshot.addEventListener('click', () => doScreenshot());
+// --- Capture (single view) ---
+btnCapture.addEventListener('click', () => doCapture());
 
-async function doScreenshot() {
+async function doCapture() {
   if (!currentImagePath) return;
 
-  btnScreenshot.disabled = true;
+  btnCapture.disabled = true;
   imageInfo.textContent = 'Capturing...';
 
   await new Promise(r => setTimeout(r, 50));
@@ -235,18 +237,19 @@ async function doScreenshot() {
 
     const dataUrl = capture.captureSingleView(viewer.getScene(), yaw, pitch, fov, width, height);
     capturedImages = { front: dataUrl };
-    dialogMode = 'screenshot';
+    captureResult = capturedImages;
+    dialogMode = 'capture';
 
     btnExport.disabled = false;
-    imageInfo.textContent = 'Screenshot captured';
+    imageInfo.textContent = 'Captured';
 
     showExportDialog();
   } catch (err) {
-    imageInfo.textContent = 'Screenshot failed: ' + err;
-    console.error('Screenshot error:', err);
+    imageInfo.textContent = 'Capture failed: ' + err;
+    console.error('Capture error:', err);
   }
 
-  btnScreenshot.disabled = false;
+  btnCapture.disabled = false;
 }
 
 // --- Cubemap (6 faces, generated on image load) ---
@@ -256,7 +259,6 @@ function showCubemapDialog() {
   if (!cubemapImages) return;
   capturedImages = cubemapImages;
   dialogMode = 'cubemap';
-  btnExport.disabled = false;
   showExportDialog();
 }
 
@@ -271,7 +273,12 @@ async function _generateCubemap() {
 }
 
 // --- Export Dialog ---
-btnExport.addEventListener('click', () => showExportDialog());
+btnExport.addEventListener('click', () => {
+  if (!captureResult) return;
+  capturedImages = captureResult;
+  dialogMode = 'capture';
+  showExportDialog();
+});
 
 function showExportDialog() {
   if (!capturedImages || !dialogMode) return;
@@ -283,6 +290,7 @@ function showExportDialog() {
 
   const dirs = Object.keys(capturedImages);
   const isCubemap = dialogMode === 'cubemap';
+  document.getElementById('dialog-title').textContent = isCubemap ? 'Cubemap' : 'Capture';
 
   for (const dir of dirs) {
     const item = document.createElement('div');
@@ -307,7 +315,7 @@ function showExportDialog() {
       </div>`;
     }
 
-    item.innerHTML = `${thumbHTML}<span>${dir.charAt(0).toUpperCase() + dir.slice(1)}</span>`;
+    item.innerHTML = thumbHTML + (isCubemap ? `<span>${dir.charAt(0).toUpperCase() + dir.slice(1)}</span>` : '');
     previewGrid.appendChild(item);
   }
 
@@ -479,7 +487,7 @@ btnSaveMerged.addEventListener('click', async () => {
   const isCubemap = dialogMode === 'cubemap';
   const defaultName = isCubemap
     ? `cubemap_${sourceBaseName()}.${ext}`
-    : `screenshot_${sourceBaseName()}.${ext}`;
+    : `capture_${sourceBaseName()}.${ext}`;
 
   const filePath = await save({
     defaultPath: defaultName,
@@ -520,7 +528,7 @@ document.addEventListener('keydown', (e) => {
       openPanorama();
       break;
     case 's':
-      if (!btnScreenshot.disabled) doScreenshot();
+      if (!btnCapture.disabled) doCapture();
       break;
     case 'c':
       if (!btnCubemap.disabled) showCubemapDialog();
@@ -587,9 +595,10 @@ document.addEventListener('paste', async (e) => {
         await viewer.loadTexture(dataUrl);
         currentImagePath = null;
         emptyState.classList.add('hidden');
-        btnScreenshot.disabled = false;
+        btnCapture.disabled = false;
         btnCubemap.disabled = true;
         capturedImages = null;
+        captureResult = null;
         cubemapImages = null;
         btnExport.disabled = true;
         imageInfo.textContent = `${file.name || 'Pasted'} (clipboard)`;
