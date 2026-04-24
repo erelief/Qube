@@ -146,12 +146,15 @@ exportDialog.querySelector('.dialog-backdrop').addEventListener('click', () => {
   exportDialog.classList.add('unfocused');
 });
 
-// Click shrunk dialog → restore
+// Click shrunk dialog → restore with animation
 const dialogContent = exportDialog.querySelector('.dialog-content');
 dialogContent.addEventListener('click', (e) => {
   if (exportDialog.classList.contains('unfocused')) {
     exportDialog.classList.remove('unfocused');
+    exportDialog.classList.add('restoring');
     e.stopPropagation();
+    // Remove restoring class after animation completes
+    setTimeout(() => exportDialog.classList.remove('restoring'), 400);
   }
 });
 

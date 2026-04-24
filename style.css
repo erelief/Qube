@@ -191,30 +191,40 @@ input[type="range"]::-webkit-slider-thumb {
   background: rgba(0, 0, 0, 0.65);
 }
 
-/* Shrunk to bottom-right corner when unfocused */
+/* Shrink animation: scale down in place → slide to corner */
+@keyframes shrink-to-corner {
+  0%   { top: 50%; left: 50%; transform: translate(-50%, -50%) scale(1); max-width: 680px; padding: 24px; opacity: 1; }
+  45%  { top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.22); max-width: 240px; padding: 12px; opacity: 0.55; }
+  100% { top: auto; left: auto; bottom: 20px; right: 20px; transform: none; max-width: 240px; padding: 12px; opacity: 0.5; }
+}
+
+@keyframes restore-from-corner {
+  0%   { top: auto; left: auto; bottom: 20px; right: 20px; transform: none; max-width: 240px; padding: 12px; opacity: 0.5; }
+  40%  { top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.22); max-width: 240px; padding: 12px; opacity: 0.7; }
+  100% { top: 50%; left: 50%; transform: translate(-50%, -50%) scale(1); max-width: 680px; padding: 24px; opacity: 1; }
+}
+
 .dialog.unfocused .dialog-content {
-  top: auto;
-  left: auto;
-  bottom: 16px;
-  right: 16px;
-  transform: none;
-  opacity: 0.6;
+  animation: shrink-to-corner 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   pointer-events: auto;
   cursor: pointer;
-  max-width: 240px;
-  width: auto;
-  padding: 12px;
+}
+
+.dialog.restoring .dialog-content {
+  animation: restore-from-corner 0.35s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  pointer-events: auto;
 }
 
 .dialog.unfocused .dialog-content:hover {
-  opacity: 0.85;
+  opacity: 0.75 !important;
 }
 
 .dialog.unfocused .dialog-content * {
   pointer-events: none;
 }
 
-.dialog.unfocused .dialog-backdrop {
+.dialog.unfocused .dialog-backdrop,
+.dialog.restoring .dialog-backdrop {
   background: transparent;
   pointer-events: none;
 }
@@ -231,7 +241,6 @@ input[type="range"]::-webkit-slider-thumb {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 24px;
-  transition: all 0.25s ease;
 }
 
 .dialog-close {
