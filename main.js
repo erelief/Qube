@@ -10,7 +10,7 @@ let capture = null;
 let capturedImages = null;
 let currentImagePath = null;
 
-// DOM elements
+// DOM elements — toolbar
 const btnOpen = document.getElementById('btn-open');
 const btnCapture = document.getElementById('btn-capture');
 const btnExport = document.getElementById('btn-export');
@@ -20,15 +20,17 @@ const imageInfo = document.getElementById('image-info');
 const emptyState = document.getElementById('empty-state');
 const viewerContainer = document.getElementById('viewer');
 
+// DOM elements — export dialog
 const exportDialog = document.getElementById('export-dialog');
-const exportLayout = document.getElementById('export-layout');
 const exportFormat = document.getElementById('export-format');
 const exportQuality = document.getElementById('export-quality');
 const qualityValue = document.getElementById('quality-value');
 const qualityRow = document.getElementById('quality-row');
 const btnSaveMerged = document.getElementById('btn-save-merged');
-const btnSaveIndividual = document.getElementById('btn-save-individual');
-const btnCancelExport = document.getElementById('btn-cancel-export');
+
+// DOM elements — lightbox
+const lightbox = document.getElementById('lightbox');
+const lightboxImg = document.getElementById('lightbox-img');
 
 const dropZone = document.getElementById('drop-zone');
 
@@ -56,7 +58,6 @@ async function loadPanorama(path) {
     imageInfo.textContent = 'Loading...';
 
     const info = await invoke('get_image_info', { path });
-    imageInfo.textContent = `${info.width} x ${info.height}`;
 
     let dataUrl;
     const maxDim = Math.max(info.width, info.height);
@@ -73,6 +74,8 @@ async function loadPanorama(path) {
     btnCapture.disabled = false;
     capturedImages = null;
     btnExport.disabled = true;
+
+    imageInfo.textContent = `${info.width} x ${info.height}`;
   } catch (err) {
     imageInfo.textContent = 'Error: ' + err;
     console.error('Failed to load panorama:', err);
@@ -87,7 +90,7 @@ fovSlider.addEventListener('input', () => {
   capture.setFov(fov);
 });
 
-// --- Capture ---
+// --- Capture → auto-open export dialog ---
 btnCapture.addEventListener('click', () => doCapture());
 
 async function doCapture() {
@@ -96,7 +99,6 @@ async function doCapture() {
   btnCapture.disabled = true;
   imageInfo.textContent = 'Capturing...';
 
-  // Small delay to let UI update
   await new Promise(r => setTimeout(r, 50));
 
   try {
@@ -105,6 +107,9 @@ async function doCapture() {
 
     btnExport.disabled = false;
     imageInfo.textContent = 'Captured 4 directions';
+
+    // Auto-open export dialog
+    showExportDialog();
   } catch (err) {
     imageInfo.textContent = 'Capture failed: ' + err;
     console.error('Capture error:', err);
@@ -124,16 +129,34 @@ function showExportDialog() {
   document.getElementById('preview-back').src = capturedImages.back;
   document.getElementById('preview-left').src = capturedImages.left;
 
-  exportDialog.classList.remove('hidden');
+  exportDialog.classList.remove('hidden', 'unfocused');
+  exportDialog.querySelector('.dialog-content').focus();
 }
 
 function hideExportDialog() {
   exportDialog.classList.add('hidden');
+  exportDialog.classList.remove('unfocused');
 }
 
-btnCancelExport.addEventListener('click', () => hideExportDialog());
+// Close button
+exportDialog.querySelector('.dialog-close').addEventListener('click', () => hideExportDialog());
 exportDialog.querySelector('.dialog-backdrop').addEventListener('click', () => hideExportDialog());
 
+// Semi-transparent on focus loss
+const dialogContent = exportDialog.querySelector('.dialog-content');
+dialogContent.addEventListener('focusout', () => {
+  // Small delay so clicking inside dialog doesn't flicker
+  setTimeout(() => {
+    if (!dialogContent.contains(document.activeElement) && !exportDialog.classList.contains('hidden')) {
+      exportDialog.classList.add('unfocused');
+    }
+  }, 100);
+});
+dialogContent.addEventListener('focusin', () => {
+  exportDialog.classList.remove('unfocused');
+});
+
+// Format / quality options
 exportFormat.addEventListener('change', () => {
   qualityRow.style.display = exportFormat.value === 'jpeg' ? 'flex' : 'none';
 });
@@ -142,9 +165,55 @@ exportQuality.addEventListener('input', () => {
   qualityValue.textContent = exportQuality.value + '%';
 });
 
-// --- Save Merged ---
+// --- Individual download buttons on preview items ---
+document.querySelectorAll('.preview-download').forEach(btn => {
+  btn.addEventListener('click', async (e) => {
+    e.stopPropagation(); // don't open lightbox
+    const dir = btn.closest('.preview-item').dataset.dir;
+    if (!capturedImages || !capturedImages[dir]) return;
+
+    const format = exportFormat.value;
+    const ext = format === 'jpeg' ? 'jpg' : 'png';
+    const filePath = await save({
+      defaultPath: `panorama_${dir}.${ext}`,
+      filters: [{ name: format.toUpperCase(), extensions: [ext] }]
+    });
+    if (!filePath) return;
+
+    try {
+      await invoke('save_image', {
+        data_url: capturedImages[dir],
+        output_path: filePath,
+      });
+      imageInfo.textContent = `Saved: ${dir}`;
+    } catch (err) {
+      imageInfo.textContent = 'Save failed: ' + err;
+    }
+  });
+});
+
+// --- Lightbox: click preview image to enlarge ---
+document.querySelectorAll('.preview-thumb').forEach(thumb => {
+  thumb.addEventListener('click', (e) => {
+    if (e.target.closest('.preview-download')) return; // download button handled above
+    const dir = thumb.closest('.preview-item').dataset.dir;
+    if (!capturedImages || !capturedImages[dir]) return;
+
+    lightboxImg.src = capturedImages[dir];
+    lightbox.classList.remove('hidden', 'unfocused');
+  });
+});
+
+// Lightbox close
+lightbox.querySelector('.dialog-close').addEventListener('click', () => {
+  lightbox.classList.add('hidden');
+});
+lightbox.querySelector('.dialog-backdrop').addEventListener('click', () => {
+  lightbox.classList.add('hidden');
+});
+
+// --- Save Merged (2x2 grid only) ---
 btnSaveMerged.addEventListener('click', async () => {
-  const layout = exportLayout.value;
   const format = exportFormat.value;
   const quality = parseInt(exportQuality.value);
 
@@ -158,7 +227,7 @@ btnSaveMerged.addEventListener('click', async () => {
   try {
     await invoke('merge_images', {
       images: [capturedImages.front, capturedImages.right, capturedImages.back, capturedImages.left],
-      options: { layout, format, quality },
+      options: { layout: 'grid', format, quality },
       output_path: filePath,
     });
     imageInfo.textContent = 'Saved: ' + filePath;
@@ -167,31 +236,6 @@ btnSaveMerged.addEventListener('click', async () => {
     imageInfo.textContent = 'Save failed: ' + err;
     console.error('Merge save error:', err);
   }
-});
-
-// --- Save Individual ---
-btnSaveIndividual.addEventListener('click', async () => {
-  const format = exportFormat.value;
-  const ext = format === 'jpeg' ? 'jpg' : 'png';
-
-  for (const dir of ['front', 'right', 'back', 'left']) {
-    const filePath = await save({
-      defaultPath: `panorama_${dir}.${ext}`,
-      filters: [{ name: format.toUpperCase(), extensions: [ext] }]
-    });
-    if (!filePath) continue;
-
-    try {
-      await invoke('save_image', {
-        data_url: capturedImages[dir],
-        output_path: filePath,
-      });
-      imageInfo.textContent = `Saved: ${dir}`;
-    } catch (err) {
-      imageInfo.textContent = 'Save failed: ' + err;
-    }
-  }
-  hideExportDialog();
 });
 
 // --- Keyboard Shortcuts ---
@@ -209,7 +253,11 @@ document.addEventListener('keydown', (e) => {
       if (!btnExport.disabled) showExportDialog();
       break;
     case 'escape':
-      hideExportDialog();
+      if (!lightbox.classList.contains('hidden')) {
+        lightbox.classList.add('hidden');
+      } else if (!exportDialog.classList.contains('hidden')) {
+        hideExportDialog();
+      }
       break;
   }
 });
@@ -237,7 +285,6 @@ document.addEventListener('drop', async (e) => {
   const ext = file.name.split('.').pop().toLowerCase();
   if (!['jpg', 'jpeg', 'png', 'webp', 'bmp', 'gif'].includes(ext)) return;
 
-  // Tauri file drop gives us the path in the file object
   const path = file.path || (file instanceof File && file.name);
   if (path) {
     await loadPanorama(path);

@@ -33,11 +33,11 @@
             <circle cx="12" cy="13" r="4"/>
           </svg>
         </button>
-        <button id="btn-export" title="Export (E)" disabled>
+        <button id="btn-export" title="View Last Capture (E)" disabled>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
           </svg>
         </button>
       </div>
@@ -63,39 +63,73 @@
       <p class="hint">Supports JPG, PNG, WebP, BMP</p>
     </div>
 
-    <!-- Export Dialog -->
+    <!-- Export / Preview Dialog -->
     <div id="export-dialog" class="dialog hidden">
       <div class="dialog-backdrop"></div>
-      <div class="dialog-content">
-        <h2>Export Screenshots</h2>
+      <div class="dialog-content" tabindex="-1">
+        <button class="dialog-close" title="Close (Esc)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+        <h2>Captured Shots</h2>
 
         <div id="preview-grid">
-          <div class="preview-item">
-            <img id="preview-front" alt="Front" />
+          <div class="preview-item" data-dir="front">
+            <div class="preview-thumb">
+              <img id="preview-front" alt="Front" />
+              <button class="preview-download" title="Save Front">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+              </button>
+            </div>
             <span>Front</span>
           </div>
-          <div class="preview-item">
-            <img id="preview-right" alt="Right" />
+          <div class="preview-item" data-dir="right">
+            <div class="preview-thumb">
+              <img id="preview-right" alt="Right" />
+              <button class="preview-download" title="Save Right">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+              </button>
+            </div>
             <span>Right</span>
           </div>
-          <div class="preview-item">
-            <img id="preview-back" alt="Back" />
+          <div class="preview-item" data-dir="back">
+            <div class="preview-thumb">
+              <img id="preview-back" alt="Back" />
+              <button class="preview-download" title="Save Back">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+              </button>
+            </div>
             <span>Back</span>
           </div>
-          <div class="preview-item">
-            <img id="preview-left" alt="Left" />
+          <div class="preview-item" data-dir="left">
+            <div class="preview-thumb">
+              <img id="preview-left" alt="Left" />
+              <button class="preview-download" title="Save Left">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+              </button>
+            </div>
             <span>Left</span>
           </div>
         </div>
 
         <div class="export-options">
-          <div class="option-row">
-            <label for="export-layout">Layout:</label>
-            <select id="export-layout">
-              <option value="grid">2x2 Grid</option>
-              <option value="horizontal">1x4 Horizontal</option>
-            </select>
-          </div>
           <div class="option-row">
             <label for="export-format">Format:</label>
             <select id="export-format">
@@ -111,10 +145,28 @@
         </div>
 
         <div class="dialog-actions">
-          <button id="btn-save-merged" class="btn-primary">Save Merged</button>
-          <button id="btn-save-individual">Save Individual</button>
-          <button id="btn-cancel-export">Cancel</button>
+          <button id="btn-save-merged" class="btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Save 2x2 Merged
+          </button>
         </div>
+      </div>
+    </div>
+
+    <!-- Lightbox -->
+    <div id="lightbox" class="dialog hidden">
+      <div class="dialog-backdrop"></div>
+      <div class="lightbox-content">
+        <button class="dialog-close" title="Close (Esc)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+        <img id="lightbox-img" alt="Preview" />
       </div>
     </div>
 

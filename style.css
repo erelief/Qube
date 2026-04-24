@@ -167,7 +167,7 @@ input[type="range"]::-webkit-slider-thumb {
   display: none;
 }
 
-/* Export Dialog */
+/* ===== Dialog base ===== */
 .dialog {
   position: fixed;
   top: 0;
@@ -175,6 +175,7 @@ input[type="range"]::-webkit-slider-thumb {
   width: 100%;
   height: 100%;
   z-index: 1000;
+  transition: opacity 0.25s ease;
 }
 
 .dialog.hidden {
@@ -187,30 +188,63 @@ input[type="range"]::-webkit-slider-thumb {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.65);
 }
 
+/* Semi-transparent when unfocused */
+.dialog.unfocused .dialog-content {
+  opacity: 0.35;
+  transform: translateY(-50%) scale(0.98);
+}
+
+/* ===== Export Dialog ===== */
 .dialog-content {
-  position: relative;
-  max-width: 640px;
-  margin: 60px auto;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 680px;
+  width: 90%;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 24px;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.dialog-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.dialog-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .dialog-content h2 {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 600;
   margin-bottom: 16px;
 }
 
-/* Preview Grid */
+/* ===== Preview Grid ===== */
 #preview-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 10px;
   margin-bottom: 16px;
 }
 
@@ -218,13 +252,55 @@ input[type="range"]::-webkit-slider-thumb {
   text-align: center;
 }
 
-.preview-item img {
-  width: 100%;
-  height: 100px;
-  object-fit: cover;
+.preview-thumb {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
   border-radius: var(--radius);
   border: 1px solid var(--border);
   background: var(--bg-tertiary);
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.preview-thumb:hover {
+  border-color: var(--accent);
+}
+
+.preview-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Download button on each preview (bottom-right, hover reveal) */
+.preview-download {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius);
+  background: rgba(13, 13, 20, 0.85);
+  color: var(--text-primary);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.2s, transform 0.2s, background 0.15s;
+}
+
+.preview-thumb:hover .preview-download {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.preview-download:hover {
+  background: var(--accent);
 }
 
 .preview-item span {
@@ -234,7 +310,7 @@ input[type="range"]::-webkit-slider-thumb {
   margin-top: 4px;
 }
 
-/* Export Options */
+/* ===== Export Options ===== */
 .export-options {
   display: flex;
   flex-direction: column;
@@ -267,7 +343,7 @@ input[type="range"]::-webkit-slider-thumb {
   font-size: 13px;
 }
 
-/* Dialog Actions */
+/* ===== Dialog Actions ===== */
 .dialog-actions {
   display: flex;
   gap: 8px;
@@ -275,6 +351,9 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .dialog-actions button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding: 8px 16px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
@@ -283,10 +362,6 @@ input[type="range"]::-webkit-slider-thumb {
   font-size: 13px;
   cursor: pointer;
   transition: all 0.15s;
-}
-
-.dialog-actions button:hover {
-  background: var(--bg-hover);
 }
 
 .dialog-actions .btn-primary {
@@ -298,7 +373,45 @@ input[type="range"]::-webkit-slider-thumb {
   background: var(--accent-hover);
 }
 
-/* Drop Zone */
+/* ===== Lightbox ===== */
+.lightbox-content {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 1280px;
+  width: 90%;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: #000;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.dialog.unfocused .lightbox-content {
+  opacity: 0.35;
+  transform: translate(-50%, -50%) scale(0.98);
+}
+
+.lightbox-content img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.lightbox-content .dialog-close {
+  top: 8px;
+  right: 8px;
+  background: rgba(13, 13, 20, 0.7);
+}
+
+.lightbox-content .dialog-close:hover {
+  background: rgba(13, 13, 20, 0.9);
+  color: var(--text-primary);
+}
+
+/* ===== Drop Zone ===== */
 #drop-zone {
   position: fixed;
   top: 0;
