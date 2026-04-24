@@ -191,13 +191,21 @@ input[type="range"]::-webkit-slider-thumb {
   background: rgba(0, 0, 0, 0.65);
 }
 
-/* Single-phase shrink/restore animation */
+/* Single-phase shrink/restore — dialog + backdrop in sync */
 @keyframes shrink-to-corner {
   100% { top: auto; left: auto; bottom: 20px; right: 20px; transform: none; max-width: 220px; width: auto; padding: 10px; opacity: 0.45; }
 }
 
+@keyframes shrink-backdrop {
+  100% { background: transparent; }
+}
+
 @keyframes restore-from-center {
   100% { top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 680px; width: 90%; padding: 24px; opacity: 1; }
+}
+
+@keyframes restore-backdrop {
+  100% { background: rgba(0, 0, 0, 0.65); }
 }
 
 .dialog.unfocused .dialog-content {
@@ -206,9 +214,17 @@ input[type="range"]::-webkit-slider-thumb {
   cursor: pointer;
 }
 
+.dialog.unfocused .dialog-backdrop {
+  animation: shrink-backdrop 0.3s ease forwards;
+}
+
 .dialog.restoring .dialog-content {
   animation: restore-from-center 0.3s ease forwards;
   pointer-events: auto;
+}
+
+.dialog.restoring .dialog-backdrop {
+  animation: restore-backdrop 0.3s ease forwards;
 }
 
 .dialog.unfocused .dialog-content:hover {
@@ -221,7 +237,6 @@ input[type="range"]::-webkit-slider-thumb {
 
 .dialog.unfocused .dialog-backdrop,
 .dialog.restoring .dialog-backdrop {
-  background: transparent;
   pointer-events: none;
 }
 
