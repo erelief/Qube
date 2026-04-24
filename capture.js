@@ -1,0 +1,90 @@
+import * as THREE from 'three';
+
+export class ScreenshotCapture {
+  constructor() {
+    this.renderWidth = 1920;
+    this.renderHeight = 1080;
+    this.fov = 90;
+  }
+
+  setFov(fov) {
+    this.fov = fov;
+  }
+
+  setResolution(width, height) {
+    this.renderWidth = width;
+    this.renderHeight = height;
+  }
+
+  captureFourDirections(scene, yaw) {
+    const camera = new THREE.PerspectiveCamera(
+      this.fov,
+      this.renderWidth / this.renderHeight,
+      0.1,
+      1000
+    );
+    camera.position.set(0, 0, 0.01);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    renderer.setSize(this.renderWidth, this.renderHeight);
+
+    const renderTarget = new THREE.WebGLRenderTarget(
+      this.renderWidth,
+      this.renderHeight
+    );
+
+    const directions = [
+      { name: 'front', yaw: yaw },
+      { name: 'right', yaw: yaw - Math.PI / 2 },
+      { name: 'back', yaw: yaw + Math.PI },
+      { name: 'left', yaw: yaw + Math.PI / 2 },
+    ];
+
+    const results = {};
+
+    for (const dir of directions) {
+      const euler = new THREE.Euler(0, dir.yaw, 0, 'YXZ');
+      camera.quaternion.setFromEuler(euler);
+
+      renderer.setRenderTarget(renderTarget);
+      renderer.render(scene, camera);
+      renderer.setRenderTarget(null);
+
+      const buffer = new Uint8Array(this.renderWidth * this.renderHeight * 4);
+      renderer.readRenderTargetPixels(
+        renderTarget,
+        0, 0,
+        this.renderWidth,
+        this.renderHeight,
+        buffer
+      );
+
+      // Flip vertically (WebGL renders bottom-up)
+      const flipped = new Uint8Array(buffer.length);
+      const rowSize = this.renderWidth * 4;
+      for (let y = 0; y < this.renderHeight; y++) {
+        const src = (this.renderHeight - y - 1) * rowSize;
+        const dst = y * rowSize;
+        flipped.set(buffer.subarray(src, src + rowSize), dst);
+      }
+
+      results[dir.name] = this._toDataUrl(flipped);
+    }
+
+    renderTarget.dispose();
+    renderer.dispose();
+
+    return results;
+  }
+
+  _toDataUrl(pixels) {
+    const canvas = document.createElement('canvas');
+    canvas.width = this.renderWidth;
+    canvas.height = this.renderHeight;
+    const ctx = canvas.getContext('2d');
+    const imageData = ctx.createImageData(this.renderWidth, this.renderHeight);
+    imageData.data.set(pixels);
+    ctx.putImageData(imageData, 0, 0);
+    return canvas.toDataURL('image/png');
+  }
+}
