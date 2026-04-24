@@ -138,14 +138,26 @@ function hideExportDialog() {
   exportDialog.classList.remove('unfocused');
 }
 
-// Close button
+// Close button (only way to truly close)
 exportDialog.querySelector('.dialog-close').addEventListener('click', () => hideExportDialog());
-exportDialog.querySelector('.dialog-backdrop').addEventListener('click', () => hideExportDialog());
 
-// Semi-transparent on focus loss
+// Backdrop click → shrink (do NOT close)
+exportDialog.querySelector('.dialog-backdrop').addEventListener('click', () => {
+  exportDialog.classList.add('unfocused');
+});
+
+// Click shrunk dialog → restore
+exportDialog.addEventListener('click', (e) => {
+  if (exportDialog.classList.contains('unfocused')) {
+    exportDialog.classList.remove('unfocused');
+    dialogContent.focus();
+    e.stopPropagation();
+  }
+});
+
+// Focus loss → shrink
 const dialogContent = exportDialog.querySelector('.dialog-content');
 dialogContent.addEventListener('focusout', () => {
-  // Small delay so clicking inside dialog doesn't flicker
   setTimeout(() => {
     if (!dialogContent.contains(document.activeElement) && !exportDialog.classList.contains('hidden')) {
       exportDialog.classList.add('unfocused');
@@ -204,13 +216,14 @@ document.querySelectorAll('.preview-thumb').forEach(thumb => {
   });
 });
 
-// Lightbox close
-lightbox.querySelector('.dialog-close').addEventListener('click', () => {
+// Lightbox close → return to export dialog
+function closeLightbox() {
   lightbox.classList.add('hidden');
-});
-lightbox.querySelector('.dialog-backdrop').addEventListener('click', () => {
-  lightbox.classList.add('hidden');
-});
+  exportDialog.classList.remove('unfocused');
+  dialogContent.focus();
+}
+lightbox.querySelector('.dialog-close').addEventListener('click', closeLightbox);
+lightbox.querySelector('.dialog-backdrop').addEventListener('click', closeLightbox);
 
 // --- Save Merged (2x2 grid only) ---
 btnSaveMerged.addEventListener('click', async () => {
