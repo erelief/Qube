@@ -76,6 +76,65 @@ pub fn resize_image(path: String, max_size: u32) -> Result<String, String> {
     Ok(format!("data:{};base64,{}", mime, b64))
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct MergeOptions {
+    pub layout: String,
+    pub format: String,
+    pub quality: u8,
+}
+
+pub fn save_image(data_url: String, output_path: String) -> Result<(), String> {
+    let b64 = data_url.split(',').nth(1).ok_or("Invalid data URL")?;
+    let bytes = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, b64)
+        .map_err(|e| format!("Base64 decode error: {}", e))?;
+    fs::write(&output_path, bytes).map_err(|e| format!("Write error: {}", e))
+}
+
+pub fn merge_images(images: Vec<String>, options: MergeOptions, output_path: String) -> Result<(), String> {
+    let mut decoded = Vec::new();
+    for (i, data_url) in images.iter().enumerate() {
+        let b64 = data_url.split(',').nth(1)
+            .ok_or_else(|| format!("Invalid data URL at index {}", i))?;
+        let bytes = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, b64)
+            .map_err(|e| format!("Base64 decode error at index {}: {}", i, e))?;
+        let img = image::load_from_memory(&bytes)
+            .map_err(|e| format!("Image decode error at index {}: {}", i, e))?;
+        decoded.push(img);
+    }
+
+    if decoded.is_empty() {
+        return Err("No images to merge".to_string());
+    }
+
+    let w = decoded[0].width();
+    let h = decoded[0].height();
+    let count = decoded.len() as u32;
+
+    let (out_w, out_h) = match options.layout.as_str() {
+        "horizontal" => (w * count, h),
+        "grid" => (w * 2, h * ((count + 1) / 2)),
+        _ => return Err(format!("Unknown layout: {}", options.layout)),
+    };
+
+    let mut output = image::RgbaImage::new(out_w, out_h);
+
+    for (i, img) in decoded.iter().enumerate() {
+        let (x, y) = match options.layout.as_str() {
+            "horizontal" => (i as u32 * w, 0),
+            "grid" => ((i as u32 % 2) * w, (i as u32 / 2) * h),
+            _ => unreachable!(),
+        };
+        image::imageops::overlay(&mut output, img, x as i64, y as i64);
+    }
+
+    let format = match options.format.as_str() {
+        "jpeg" | "jpg" => image::ImageFormat::Jpeg,
+        _ => image::ImageFormat::Png,
+    };
+    output.save_with_format(&output_path, format)
+        .map_err(|e| format!("Save error: {}", e))
+}
+
 mod commands {
     use super::*;
 
@@ -93,6 +152,16 @@ mod commands {
     pub fn resize_image(path: String, max_size: u32) -> Result<String, String> {
         super::resize_image(path, max_size)
     }
+
+    #[tauri::command]
+    pub fn save_image(data_url: String, output_path: String) -> Result<(), String> {
+        super::save_image(data_url, output_path)
+    }
+
+    #[tauri::command]
+    pub fn merge_images(images: Vec<String>, options: super::MergeOptions, output_path: String) -> Result<(), String> {
+        super::merge_images(images, options, output_path)
+    }
 }
 
 pub fn run() {
@@ -103,6 +172,8 @@ pub fn run() {
             commands::get_image_info,
             commands::read_file_as_data_url,
             commands::resize_image,
+            commands::save_image,
+            commands::merge_images,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -171,5 +242,56 @@ mod tests {
         assert!(img.width() <= 500);
         assert!(img.height() <= 500);
         let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn test_save_image() {
+        let path = std::env::temp_dir().join("test_save_out.png");
+        let data_url = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==".to_string();
+        save_image(data_url, path.to_str().unwrap().to_string()).unwrap();
+        assert!(path.exists());
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn test_merge_images_horizontal() {
+        let img = RgbaImage::from_pixel(100, 50, image::Rgba([255, 0, 0, 255]));
+        let mut png_buf = Vec::new();
+        img.write_to(&mut std::io::Cursor::new(&mut png_buf), image::ImageFormat::Png).unwrap();
+        let b64 = base64::engine::general_purpose::STANDARD.encode(&png_buf);
+        let data_url = format!("data:image/png;base64,{}", b64);
+
+        let output = std::env::temp_dir().join("test_merged_h.png");
+        merge_images(
+            vec![data_url.clone(); 4],
+            MergeOptions { layout: "horizontal".to_string(), format: "png".to_string(), quality: 95 },
+            output.to_str().unwrap().to_string(),
+        ).unwrap();
+
+        let merged = image::ImageReader::open(&output).unwrap().decode().unwrap();
+        assert_eq!(merged.width(), 400);
+        assert_eq!(merged.height(), 50);
+        let _ = std::fs::remove_file(&output);
+    }
+
+    #[test]
+    fn test_merge_images_grid() {
+        let img = RgbaImage::from_pixel(100, 50, image::Rgba([0, 0, 255, 255]));
+        let mut png_buf = Vec::new();
+        img.write_to(&mut std::io::Cursor::new(&mut png_buf), image::ImageFormat::Png).unwrap();
+        let b64 = base64::engine::general_purpose::STANDARD.encode(&png_buf);
+        let data_url = format!("data:image/png;base64,{}", b64);
+
+        let output = std::env::temp_dir().join("test_merged_grid.png");
+        merge_images(
+            vec![data_url.clone(); 4],
+            MergeOptions { layout: "grid".to_string(), format: "png".to_string(), quality: 95 },
+            output.to_str().unwrap().to_string(),
+        ).unwrap();
+
+        let merged = image::ImageReader::open(&output).unwrap().decode().unwrap();
+        assert_eq!(merged.width(), 200);
+        assert_eq!(merged.height(), 100);
+        let _ = std::fs::remove_file(&output);
     }
 }
