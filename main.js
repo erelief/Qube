@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { getCurrentWebview } from '@tauri-apps/api/webview';
 import { open, save } from '@tauri-apps/plugin-dialog';
 import { PanoramaViewer } from './viewer.js';
 import { ScreenshotCapture } from './capture.js';
@@ -279,50 +280,52 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// --- Drag and Drop ---
-document.addEventListener('dragover', (e) => {
-  e.preventDefault();
-  e.dataTransfer.dropEffect = 'copy';
-  dropZone.classList.remove('hidden');
-});
+// --- Drag & Drop + Paste ---
+const SUPPORTED_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp', 'bmp', 'gif']);
 
-document.addEventListener('dragleave', (e) => {
-  if (e.relatedTarget === null || !document.contains(e.relatedTarget)) {
-    dropZone.classList.add('hidden');
-  }
-});
+function isSupportedImage(path) {
+  const ext = path.split('.').pop().toLowerCase();
+  return SUPPORTED_EXTS.has(ext);
+}
 
-document.addEventListener('drop', async (e) => {
-  e.preventDefault();
-  dropZone.classList.add('hidden');
+// Tauri native drag-and-drop — silent, no overlay
+async function initDragDrop() {
+  if (!window.__TAURI_INTERNALS__) return;
+  const webview = getCurrentWebview();
+  await webview.onDragDropEvent((event) => {
+    if (event.payload.type === 'drop') {
+      const filePath = event.payload.paths?.find(isSupportedImage);
+      if (filePath) loadPanorama(filePath).catch((err) => {
+        imageInfo.textContent = 'Drop error: ' + err;
+      });
+    }
+  });
+}
+initDragDrop();
 
-  const files = e.dataTransfer?.files;
-  if (!files || files.length === 0) return;
-
-  const file = files[0];
-  const ext = file.name.split('.').pop().toLowerCase();
-  if (!['jpg', 'jpeg', 'png', 'webp', 'bmp', 'gif'].includes(ext)) return;
-
-  // Prefer native filesystem path (Tauri provides file.path for OS drops)
-  if (file.path) {
-    await loadPanorama(file.path);
-    return;
-  }
-
-  // Fallback: read file as data URL directly in JS
-  try {
-    imageInfo.textContent = 'Loading...';
-    const dataUrl = await readFileAsDataUrl(file);
-    await viewer.loadTexture(dataUrl);
-    currentImagePath = null;
-    emptyState.classList.add('hidden');
-    btnCapture.disabled = false;
-    capturedImages = null;
-    btnExport.disabled = true;
-    imageInfo.textContent = `${file.name} (dropped)`;
-  } catch (err) {
-    imageInfo.textContent = 'Drop error: ' + err;
-    console.error('Drop load error:', err);
+// Ctrl+V paste image from clipboard
+document.addEventListener('paste', async (e) => {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type.startsWith('image/') && item.getAsFile()) {
+      e.preventDefault();
+      try {
+        imageInfo.textContent = 'Loading...';
+        const file = item.getAsFile();
+        const dataUrl = await readFileAsDataUrl(file);
+        await viewer.loadTexture(dataUrl);
+        currentImagePath = null;
+        emptyState.classList.add('hidden');
+        btnCapture.disabled = false;
+        capturedImages = null;
+        btnExport.disabled = true;
+        imageInfo.textContent = `${file.name || 'Pasted'} (clipboard)`;
+      } catch (err) {
+        imageInfo.textContent = 'Paste error: ' + err;
+      }
+      break;
+    }
   }
 });
 
