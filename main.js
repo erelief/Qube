@@ -61,7 +61,7 @@ async function loadPanorama(path) {
     let dataUrl;
     const maxDim = Math.max(info.width, info.height);
     if (maxDim > MAX_TEXTURE_SIZE) {
-      dataUrl = await invoke('resize_image', { path, maxSize: MAX_TEXTURE_SIZE });
+      dataUrl = await invoke('resize_image', { path, max_size: MAX_TEXTURE_SIZE });
     } else {
       dataUrl = await invoke('read_file_as_data_url', { path });
     }
@@ -73,8 +73,6 @@ async function loadPanorama(path) {
     btnCapture.disabled = false;
     capturedImages = null;
     btnExport.disabled = true;
-
-    imageInfo.textContent = `${info.width} x ${info.height}`;
   } catch (err) {
     imageInfo.textContent = 'Error: ' + err;
     console.error('Failed to load panorama:', err);
@@ -161,7 +159,7 @@ btnSaveMerged.addEventListener('click', async () => {
     await invoke('merge_images', {
       images: [capturedImages.front, capturedImages.right, capturedImages.back, capturedImages.left],
       options: { layout, format, quality },
-      outputPath: filePath,
+      output_path: filePath,
     });
     imageInfo.textContent = 'Saved: ' + filePath;
     hideExportDialog();
@@ -185,8 +183,8 @@ btnSaveIndividual.addEventListener('click', async () => {
 
     try {
       await invoke('save_image', {
-        dataUrl: capturedImages[dir],
-        outputPath: filePath,
+        data_url: capturedImages[dir],
+        output_path: filePath,
       });
       imageInfo.textContent = `Saved: ${dir}`;
     } catch (err) {

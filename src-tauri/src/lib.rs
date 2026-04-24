@@ -127,12 +127,21 @@ pub fn merge_images(images: Vec<String>, options: MergeOptions, output_path: Str
         image::imageops::overlay(&mut output, img, x as i64, y as i64);
     }
 
-    let format = match options.format.as_str() {
-        "jpeg" | "jpg" => image::ImageFormat::Jpeg,
-        _ => image::ImageFormat::Png,
-    };
-    output.save_with_format(&output_path, format)
-        .map_err(|e| format!("Save error: {}", e))
+    match options.format.as_str() {
+        "jpeg" | "jpg" => {
+            let quality = if options.quality == 0 { 95u8 } else { options.quality };
+            let mut file = std::fs::File::create(&output_path)
+                .map_err(|e| format!("Create file error: {}", e))?;
+            let encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut file, quality);
+            output.write_with_encoder(encoder)
+                .map_err(|e| format!("JPEG encode error: {}", e))?;
+        }
+        _ => {
+            output.save_with_format(&output_path, image::ImageFormat::Png)
+                .map_err(|e| format!("Save error: {}", e))?;
+        }
+    }
+    Ok(())
 }
 
 mod commands {
