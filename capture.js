@@ -2,8 +2,8 @@ import * as THREE from 'three';
 
 export class ScreenshotCapture {
   constructor() {
-    this.renderWidth = 1920;
-    this.renderHeight = 1080;
+    this.renderWidth = 1440;
+    this.renderHeight = 1440;
     this.fov = 90;
   }
 

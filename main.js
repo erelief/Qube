@@ -6,10 +6,20 @@ import { ScreenshotCapture } from './capture.js';
 
 const MAX_TEXTURE_SIZE = 8192;
 
+// Aspect ratio configuration
+const ASPECT_RATIOS = {
+  '1:1': { ratio: 1.0,   label: '1:1', recommendedFov: 90, baseWidth: 1440 },
+  '4:3': { ratio: 4 / 3, label: '4:3', recommendedFov: 80, baseWidth: 1440 },
+  '3:2': { ratio: 3 / 2, label: '3:2', recommendedFov: 75, baseWidth: 1440 },
+};
+const DEFAULT_ASPECT = '1:1';
+
 let viewer = null;
 let capture = null;
 let capturedImages = null;
 let currentImagePath = null;
+let currentAspect = DEFAULT_ASPECT;
+let maskVisible = true;
 
 // DOM elements — toolbar
 const btnOpen = document.getElementById('btn-open');
@@ -38,6 +48,28 @@ const dropZone = document.getElementById('drop-zone');
 // Initialize viewer and capture
 viewer = new PanoramaViewer(viewerContainer);
 capture = new ScreenshotCapture();
+
+// --- FOV Control ---
+const FOV_MIN = parseInt(fovSlider.min);
+const FOV_MAX = parseInt(fovSlider.max);
+
+function setFov(value) {
+  const fov = Math.max(FOV_MIN, Math.min(FOV_MAX, value));
+  fovSlider.value = fov;
+  fovValue.textContent = fov + '°';
+  viewer.setFov(fov);
+  capture.setFov(fov);
+}
+
+fovSlider.addEventListener('input', () => setFov(parseInt(fovSlider.value)));
+
+viewerContainer.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  setFov(parseInt(fovSlider.value) + (e.deltaY > 0 ? 5 : -5));
+}, { passive: false });
+
+// Apply default aspect ratio (must come after setFov/FOV_MIN are defined)
+_applyAspectRatio(DEFAULT_ASPECT);
 
 // --- File Open ---
 btnOpen.addEventListener('click', () => openPanorama());
@@ -83,13 +115,97 @@ async function loadPanorama(path) {
   }
 }
 
-// --- FOV Control ---
-fovSlider.addEventListener('input', () => {
-  const fov = parseInt(fovSlider.value);
-  fovValue.textContent = fov + '°';
-  viewer.setFov(fov);
-  capture.setFov(fov);
+// --- Aspect Ratio Control ---
+function _applyAspectRatio(ratioKey) {
+  const config = ASPECT_RATIOS[ratioKey];
+  if (!config) return;
+
+  currentAspect = ratioKey;
+
+  const capHeight = Math.round(config.baseWidth / config.ratio);
+  capture.setResolution(config.baseWidth, capHeight);
+
+  _updateAspectSliderUI(ratioKey);
+  _updateMaskGeometry();
+}
+
+function _updateAspectSliderUI(key) {
+  const index = Object.keys(ASPECT_RATIOS).indexOf(key);
+  const slider = document.querySelector('.ratio-slider');
+
+  slider.querySelectorAll('.ratio-option').forEach((btn, i) => {
+    btn.classList.toggle('active', i === index);
+  });
+
+  slider.setAttribute('data-index', String(index));
+}
+
+function _updateMaskGeometry() {
+  const viewerEl = document.getElementById('viewer');
+  const mask = document.getElementById('aspect-mask');
+
+  if (!maskVisible || !viewerEl.offsetWidth) return;
+
+  const vw = viewerEl.clientWidth;
+  const vh = viewerEl.clientHeight;
+  const canvasAspect = vw / vh;
+  const targetA = ASPECT_RATIOS[currentAspect].ratio;
+
+  let clearW, clearH, offsetX, offsetY;
+
+  if (canvasAspect > targetA) {
+    clearH = vh;
+    clearW = Math.round(vh * targetA);
+    offsetX = Math.round((vw - clearW) / 2);
+    offsetY = 0;
+  } else {
+    clearW = vw;
+    clearH = Math.round(vw / targetA);
+    offsetX = 0;
+    offsetY = Math.round((vh - clearH) / 2);
+  }
+
+  mask.querySelector('.mask-top').style.height = offsetY + 'px';
+  mask.querySelector('.mask-bottom').style.height = (vh - offsetY - clearH) + 'px';
+
+  const maskLeft = mask.querySelector('.mask-left');
+  maskLeft.style.width = offsetX + 'px';
+  maskLeft.style.top = offsetY + 'px';
+  maskLeft.style.height = clearH + 'px';
+
+  const maskRight = mask.querySelector('.mask-right');
+  maskRight.style.width = (vw - offsetX - clearW) + 'px';
+  maskRight.style.top = offsetY + 'px';
+  maskRight.style.height = clearH + 'px';
+}
+
+function _toggleMask() {
+  maskVisible = !maskVisible;
+  const mask = document.getElementById('aspect-mask');
+  const btn = document.getElementById('btn-mask-toggle');
+
+  mask.classList.toggle('hidden', !maskVisible);
+  btn.classList.toggle('active', maskVisible);
+}
+
+// Wire up ratio option buttons
+document.querySelectorAll('.ratio-option').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const ratio = btn.dataset.ratio;
+    if (ratio && ratio !== currentAspect) {
+      _applyAspectRatio(ratio);
+    }
+  });
 });
+
+// Wire up mask toggle button
+document.getElementById('btn-mask-toggle').addEventListener('click', () => _toggleMask());
+
+// ResizeObserver to keep mask geometry in sync
+const viewerResizeObserver = new ResizeObserver(() => {
+  _updateMaskGeometry();
+});
+viewerResizeObserver.observe(document.getElementById('viewer'));
 
 // --- Capture → auto-open export dialog ---
 btnCapture.addEventListener('click', () => doCapture());
@@ -314,6 +430,18 @@ document.addEventListener('keydown', (e) => {
       break;
     case 'e':
       if (!btnExport.disabled) showExportDialog();
+      break;
+    case 'm':
+      _toggleMask();
+      break;
+    case '1':
+      _applyAspectRatio('1:1');
+      break;
+    case '2':
+      _applyAspectRatio('4:3');
+      break;
+    case '3':
+      _applyAspectRatio('3:2');
       break;
     case 'escape':
       if (!lightbox.classList.contains('hidden')) {

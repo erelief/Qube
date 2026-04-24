@@ -24,6 +24,16 @@
         <span id="fov-value" class="tool-value">90°</span>
       </div>
 
+      <div class="tool-group">
+        <button id="btn-mask-toggle" title="Toggle Crop Mask (M)" class="active">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="12" y1="3" x2="12" y2="21"/>
+          </svg>
+        </button>
+      </div>
+
       <div class="tool-separator"></div>
 
       <div class="tool-group">
@@ -50,7 +60,28 @@
     </div>
 
     <!-- 3D Viewer Container -->
-    <div id="viewer"></div>
+    <div id="viewer">
+      <div id="canvas-wrapper"></div>
+      <div id="aspect-mask">
+        <div class="mask-area mask-top"></div>
+        <div class="mask-middle">
+          <div class="mask-area mask-left"></div>
+          <div class="mask-clear"></div>
+          <div class="mask-area mask-right"></div>
+        </div>
+        <div class="mask-area mask-bottom"></div>
+      </div>
+    </div>
+
+    <!-- Aspect Ratio Slider (below viewer) -->
+    <div id="ratio-bar">
+      <div class="ratio-slider" data-index="0">
+        <button class="ratio-option active" data-ratio="1:1">1:1</button>
+        <button class="ratio-option" data-ratio="4:3">4:3</button>
+        <button class="ratio-option" data-ratio="3:2">3:2</button>
+        <div class="ratio-track"><div class="ratio-thumb"></div></div>
+      </div>
+    </div>
 
     <!-- Empty state overlay -->
     <div id="empty-state">
