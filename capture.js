@@ -27,11 +27,13 @@ export class ScreenshotCapture {
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
     renderer.setSize(this.renderWidth, this.renderHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     const renderTarget = new THREE.WebGLRenderTarget(
       this.renderWidth,
       this.renderHeight
     );
+    renderTarget.texture.colorSpace = THREE.SRGBColorSpace;
 
     const directions = [
       { name: 'front', yaw: yaw, pitch: pitch },
