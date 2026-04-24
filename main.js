@@ -147,25 +147,26 @@ exportDialog.querySelector('.dialog-backdrop').addEventListener('click', () => {
 });
 
 // Click shrunk dialog → restore
-exportDialog.addEventListener('click', (e) => {
+const dialogContent = exportDialog.querySelector('.dialog-content');
+dialogContent.addEventListener('click', (e) => {
   if (exportDialog.classList.contains('unfocused')) {
     exportDialog.classList.remove('unfocused');
-    dialogContent.focus();
     e.stopPropagation();
   }
 });
 
-// Focus loss → shrink
-const dialogContent = exportDialog.querySelector('.dialog-content');
-dialogContent.addEventListener('focusout', () => {
-  setTimeout(() => {
-    if (!dialogContent.contains(document.activeElement) && !exportDialog.classList.contains('hidden')) {
-      exportDialog.classList.add('unfocused');
-    }
-  }, 100);
+// Any interaction outside dialog → shrink
+viewerContainer.addEventListener('mousedown', () => {
+  if (!exportDialog.classList.contains('hidden')) {
+    exportDialog.classList.add('unfocused');
+  }
 });
-dialogContent.addEventListener('focusin', () => {
-  exportDialog.classList.remove('unfocused');
+
+// Toolbar interactions also trigger shrink
+document.getElementById('toolbar').addEventListener('mousedown', () => {
+  if (!exportDialog.classList.contains('hidden')) {
+    exportDialog.classList.add('unfocused');
+  }
 });
 
 // Format / quality options
