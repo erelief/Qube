@@ -16,6 +16,94 @@ export class ScreenshotCapture {
     this.renderHeight = height;
   }
 
+  captureSingleView(scene, yaw, pitch, fov, width, height) {
+    const camera = new THREE.PerspectiveCamera(fov, width / height, 0.1, 1000);
+    camera.position.set(0, 0, 0.01);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    renderer.setSize(width, height);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+    const renderTarget = new THREE.WebGLRenderTarget(width, height);
+    renderTarget.texture.colorSpace = THREE.SRGBColorSpace;
+
+    const euler = new THREE.Euler(pitch, yaw, 0, 'YXZ');
+    camera.quaternion.setFromEuler(euler);
+
+    renderer.setRenderTarget(renderTarget);
+    renderer.render(scene, camera);
+    renderer.setRenderTarget(null);
+
+    const buffer = new Uint8Array(width * height * 4);
+    renderer.readRenderTargetPixels(renderTarget, 0, 0, width, height, buffer);
+
+    const flipped = new Uint8Array(buffer.length);
+    const rowSize = width * 4;
+    for (let y = 0; y < height; y++) {
+      const src = (height - y - 1) * rowSize;
+      const dst = y * rowSize;
+      flipped.set(buffer.subarray(src, src + rowSize), dst);
+    }
+
+    const result = this._toDataUrl(flipped);
+
+    renderTarget.dispose();
+    renderer.dispose();
+
+    return result;
+  }
+
+  captureSixFaces(scene) {
+    const size = this.renderWidth;
+    const camera = new THREE.PerspectiveCamera(90, 1, 0.1, 1000);
+    camera.position.set(0, 0, 0.01);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    renderer.setSize(size, size);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+    const renderTarget = new THREE.WebGLRenderTarget(size, size);
+    renderTarget.texture.colorSpace = THREE.SRGBColorSpace;
+
+    const directions = [
+      { name: 'front', yaw: 0, pitch: 0 },
+      { name: 'right', yaw: -Math.PI / 2, pitch: 0 },
+      { name: 'back', yaw: Math.PI, pitch: 0 },
+      { name: 'left', yaw: Math.PI / 2, pitch: 0 },
+      { name: 'up', yaw: 0, pitch: Math.PI / 2 },
+      { name: 'down', yaw: 0, pitch: -Math.PI / 2 },
+    ];
+
+    const results = {};
+
+    for (const dir of directions) {
+      const euler = new THREE.Euler(dir.pitch, dir.yaw, 0, 'YXZ');
+      camera.quaternion.setFromEuler(euler);
+
+      renderer.setRenderTarget(renderTarget);
+      renderer.render(scene, camera);
+      renderer.setRenderTarget(null);
+
+      const buffer = new Uint8Array(size * size * 4);
+      renderer.readRenderTargetPixels(renderTarget, 0, 0, size, size, buffer);
+
+      const flipped = new Uint8Array(buffer.length);
+      const rowSize = size * 4;
+      for (let y = 0; y < size; y++) {
+        const src = (size - y - 1) * rowSize;
+        const dst = y * rowSize;
+        flipped.set(buffer.subarray(src, src + rowSize), dst);
+      }
+
+      results[dir.name] = this._toDataUrl(flipped, size, size);
+    }
+
+    renderTarget.dispose();
+    renderer.dispose();
+
+    return results;
+  }
+
   captureFourDirections(scene, yaw, pitch) {
     const camera = new THREE.PerspectiveCamera(
       this.fov,
@@ -79,12 +167,14 @@ export class ScreenshotCapture {
     return results;
   }
 
-  _toDataUrl(pixels) {
+  _toDataUrl(pixels, w, h) {
+    const width = w || this.renderWidth;
+    const height = h || this.renderHeight;
     const canvas = document.createElement('canvas');
-    canvas.width = this.renderWidth;
-    canvas.height = this.renderHeight;
+    canvas.width = width;
+    canvas.height = height;
     const ctx = canvas.getContext('2d');
-    const imageData = ctx.createImageData(this.renderWidth, this.renderHeight);
+    const imageData = ctx.createImageData(width, height);
     imageData.data.set(pixels);
     ctx.putImageData(imageData, 0, 0);
     return canvas.toDataURL('image/png');

@@ -81,6 +81,7 @@ pub struct MergeOptions {
     pub layout: String,
     pub format: String,
     pub quality: u8,
+    pub columns: Option<u32>,
 }
 
 pub fn save_image(data_url: String, output_path: String) -> Result<(), String> {
@@ -112,7 +113,10 @@ pub fn merge_images(images: Vec<String>, options: MergeOptions, output_path: Str
 
     let (out_w, out_h) = match options.layout.as_str() {
         "horizontal" => (w * count, h),
-        "grid" => (w * 2, h * ((count + 1) / 2)),
+        "grid" => {
+            let cols = options.columns.unwrap_or(2);
+            (w * cols, h * ((count + cols - 1) / cols))
+        }
         _ => return Err(format!("Unknown layout: {}", options.layout)),
     };
 
@@ -121,7 +125,10 @@ pub fn merge_images(images: Vec<String>, options: MergeOptions, output_path: Str
     for (i, img) in decoded.iter().enumerate() {
         let (x, y) = match options.layout.as_str() {
             "horizontal" => (i as u32 * w, 0),
-            "grid" => ((i as u32 % 2) * w, (i as u32 / 2) * h),
+            "grid" => {
+                let cols = options.columns.unwrap_or(2);
+                ((i as u32 % cols) * w, (i as u32 / cols) * h)
+            }
             _ => unreachable!(),
         };
         image::imageops::overlay(&mut output, img, x as i64, y as i64);
@@ -273,7 +280,7 @@ mod tests {
         let output = std::env::temp_dir().join("test_merged_h.png");
         merge_images(
             vec![data_url.clone(); 4],
-            MergeOptions { layout: "horizontal".to_string(), format: "png".to_string(), quality: 95 },
+            MergeOptions { layout: "horizontal".to_string(), format: "png".to_string(), quality: 95, columns: None },
             output.to_str().unwrap().to_string(),
         ).unwrap();
 
@@ -294,7 +301,7 @@ mod tests {
         let output = std::env::temp_dir().join("test_merged_grid.png");
         merge_images(
             vec![data_url.clone(); 4],
-            MergeOptions { layout: "grid".to_string(), format: "png".to_string(), quality: 95 },
+            MergeOptions { layout: "grid".to_string(), format: "png".to_string(), quality: 95, columns: None },
             output.to_str().unwrap().to_string(),
         ).unwrap();
 

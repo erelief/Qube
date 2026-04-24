@@ -37,10 +37,17 @@
       <div class="tool-separator"></div>
 
       <div class="tool-group">
-        <button id="btn-capture" title="Capture 4 Directions (C)" disabled>
+        <button id="btn-screenshot" title="Screenshot (S)" disabled>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
             <circle cx="12" cy="13" r="4"/>
+          </svg>
+        </button>
+        <button id="btn-cubemap" title="Cubemap (C)" disabled>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-box">
+            <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+            <path d="m3.3 7 8.7 5 8.7-5"/>
+            <path d="M12 22V12"/>
           </svg>
         </button>
         <button id="btn-export" title="View Last Capture (E)" disabled>
@@ -105,60 +112,7 @@
         </button>
         <h2>Captured Shots</h2>
 
-        <div id="preview-grid">
-          <div class="preview-item" data-dir="front">
-            <div class="preview-thumb">
-              <img id="preview-front" alt="Front" />
-              <button class="preview-download" title="Save Front">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                  <polyline points="7 10 12 15 17 10"/>
-                  <line x1="12" y1="15" x2="12" y2="3"/>
-                </svg>
-              </button>
-            </div>
-            <span>Front</span>
-          </div>
-          <div class="preview-item" data-dir="right">
-            <div class="preview-thumb">
-              <img id="preview-right" alt="Right" />
-              <button class="preview-download" title="Save Right">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                  <polyline points="7 10 12 15 17 10"/>
-                  <line x1="12" y1="15" x2="12" y2="3"/>
-                </svg>
-              </button>
-            </div>
-            <span>Right</span>
-          </div>
-          <div class="preview-item" data-dir="back">
-            <div class="preview-thumb">
-              <img id="preview-back" alt="Back" />
-              <button class="preview-download" title="Save Back">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                  <polyline points="7 10 12 15 17 10"/>
-                  <line x1="12" y1="15" x2="12" y2="3"/>
-                </svg>
-              </button>
-            </div>
-            <span>Back</span>
-          </div>
-          <div class="preview-item" data-dir="left">
-            <div class="preview-thumb">
-              <img id="preview-left" alt="Left" />
-              <button class="preview-download" title="Save Left">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                  <polyline points="7 10 12 15 17 10"/>
-                  <line x1="12" y1="15" x2="12" y2="3"/>
-                </svg>
-              </button>
-            </div>
-            <span>Left</span>
-          </div>
-        </div>
+        <div id="preview-grid"></div>
 
         <div class="export-options">
           <div class="option-row">
@@ -182,7 +136,7 @@
               <polyline points="7 10 12 15 17 10"/>
               <line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
-            Save 2x2 Merged
+            Save Merged
           </button>
         </div>
       </div>

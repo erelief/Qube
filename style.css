@@ -360,6 +360,24 @@ input[type="range"]::-webkit-slider-thumb {
   pointer-events: auto;
 }
 
+/* Cubemap mode: no shrink/unfocus animation — only open/close */
+.dialog[data-mode="cubemap"].unfocused .dialog-content,
+.dialog[data-mode="cubemap"].restoring .dialog-content {
+  animation: none !important;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 860px;
+  width: 90%;
+  padding: 24px;
+  opacity: 1;
+}
+.dialog[data-mode="cubemap"].unfocused .dialog-backdrop,
+.dialog[data-mode="cubemap"].restoring .dialog-backdrop {
+  animation: none !important;
+  background: rgba(0, 0, 0, 0.65);
+}
+
 .dialog.unfocused .dialog-backdrop,
 .dialog.restoring .dialog-backdrop {
   pointer-events: none;
@@ -413,6 +431,41 @@ input[type="range"]::-webkit-slider-thumb {
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   margin-bottom: 16px;
+}
+
+/* Screenshot mode: single image centered */
+#preview-grid[data-mode="screenshot"] {
+  grid-template-columns: 1fr;
+  justify-items: center;
+}
+#preview-grid[data-mode="screenshot"] .preview-thumb {
+  max-width: 400px;
+  max-height: 300px;
+}
+#preview-grid[data-mode="screenshot"] .preview-download {
+  display: none;
+}
+#preview-grid[data-mode="screenshot"] .preview-thumb {
+  cursor: default;
+}
+#preview-grid[data-mode="screenshot"] .preview-thumb:hover {
+  border-color: var(--border);
+}
+
+/* Cubemap mode: 3 columns x 2 rows, square thumbnails */
+#preview-grid[data-mode="cubemap"] {
+  grid-template-columns: repeat(3, 1fr);
+}
+#preview-grid[data-mode="cubemap"] .preview-thumb {
+  aspect-ratio: 1 / 1;
+}
+#preview-grid[data-mode="cubemap"] .preview-thumb img {
+  object-fit: contain;
+}
+
+/* Cubemap dialog wider */
+.dialog-content[data-mode="cubemap"] {
+  max-width: 860px;
 }
 
 .preview-item {
@@ -569,6 +622,14 @@ input[type="range"]::-webkit-slider-thumb {
   border: 1px solid var(--border);
   background: #000;
   transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+/* Cubemap lightbox: force 1:1 square */
+.lightbox-content[data-mode="cubemap"] {
+  width: min(80vw, 80vh);
+  max-width: none;
+  max-height: none;
+  aspect-ratio: 1 / 1;
 }
 
 .dialog.unfocused .lightbox-content {

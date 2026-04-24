@@ -17,13 +17,16 @@ const DEFAULT_ASPECT = '1:1';
 let viewer = null;
 let capture = null;
 let capturedImages = null;
+let cubemapImages = null;
+let dialogMode = null;
 let currentImagePath = null;
 let currentAspect = DEFAULT_ASPECT;
 let maskVisible = true;
 
 // DOM elements — toolbar
 const btnOpen = document.getElementById('btn-open');
-const btnCapture = document.getElementById('btn-capture');
+const btnScreenshot = document.getElementById('btn-screenshot');
+const btnCubemap = document.getElementById('btn-cubemap');
 const btnExport = document.getElementById('btn-export');
 const fovSlider = document.getElementById('fov-slider');
 const fovValue = document.getElementById('fov-value');
@@ -104,11 +107,16 @@ async function loadPanorama(path) {
     currentImagePath = path;
 
     emptyState.classList.add('hidden');
-    btnCapture.disabled = false;
+    btnScreenshot.disabled = false;
+    btnCubemap.disabled = true;
     capturedImages = null;
+    cubemapImages = null;
     btnExport.disabled = true;
 
     imageInfo.textContent = `${info.width} x ${info.height}`;
+
+    // Generate cubemap in background
+    _generateCubemap();
   } catch (err) {
     imageInfo.textContent = 'Error: ' + err;
     console.error('Failed to load panorama:', err);
@@ -207,44 +215,151 @@ const viewerResizeObserver = new ResizeObserver(() => {
 });
 viewerResizeObserver.observe(document.getElementById('viewer'));
 
-// --- Capture → auto-open export dialog ---
-btnCapture.addEventListener('click', () => doCapture());
+// --- Screenshot (single view) ---
+btnScreenshot.addEventListener('click', () => doScreenshot());
 
-async function doCapture() {
+async function doScreenshot() {
   if (!currentImagePath) return;
 
-  btnCapture.disabled = true;
+  btnScreenshot.disabled = true;
   imageInfo.textContent = 'Capturing...';
 
   await new Promise(r => setTimeout(r, 50));
 
   try {
     const { yaw, pitch } = viewer.getYawPitch();
-    capturedImages = capture.captureFourDirections(viewer.getScene(), yaw, pitch);
+    const fov = parseInt(fovSlider.value);
+    const config = ASPECT_RATIOS[currentAspect];
+    const width = config.baseWidth;
+    const height = Math.round(config.baseWidth / config.ratio);
+
+    const dataUrl = capture.captureSingleView(viewer.getScene(), yaw, pitch, fov, width, height);
+    capturedImages = { front: dataUrl };
+    dialogMode = 'screenshot';
 
     btnExport.disabled = false;
-    imageInfo.textContent = 'Captured 4 directions';
+    imageInfo.textContent = 'Screenshot captured';
 
-    // Auto-open export dialog
     showExportDialog();
   } catch (err) {
-    imageInfo.textContent = 'Capture failed: ' + err;
-    console.error('Capture error:', err);
+    imageInfo.textContent = 'Screenshot failed: ' + err;
+    console.error('Screenshot error:', err);
   }
 
-  btnCapture.disabled = false;
+  btnScreenshot.disabled = false;
+}
+
+// --- Cubemap (6 faces, generated on image load) ---
+btnCubemap.addEventListener('click', () => showCubemapDialog());
+
+function showCubemapDialog() {
+  if (!cubemapImages) return;
+  capturedImages = cubemapImages;
+  dialogMode = 'cubemap';
+  btnExport.disabled = false;
+  showExportDialog();
+}
+
+async function _generateCubemap() {
+  try {
+    cubemapImages = capture.captureSixFaces(viewer.getScene());
+    btnCubemap.disabled = false;
+    imageInfo.textContent = `${imageInfo.textContent.split(' — ')[0]} — Cubemap ready`;
+  } catch (err) {
+    console.error('Cubemap generation error:', err);
+  }
 }
 
 // --- Export Dialog ---
 btnExport.addEventListener('click', () => showExportDialog());
 
 function showExportDialog() {
-  if (!capturedImages) return;
+  if (!capturedImages || !dialogMode) return;
 
-  document.getElementById('preview-front').src = capturedImages.front;
-  document.getElementById('preview-right').src = capturedImages.right;
-  document.getElementById('preview-back').src = capturedImages.back;
-  document.getElementById('preview-left').src = capturedImages.left;
+  const previewGrid = document.getElementById('preview-grid');
+  previewGrid.innerHTML = '';
+  previewGrid.dataset.mode = dialogMode;
+  exportDialog.dataset.mode = dialogMode;
+
+  const dirs = Object.keys(capturedImages);
+  const isCubemap = dialogMode === 'cubemap';
+
+  for (const dir of dirs) {
+    const item = document.createElement('div');
+    item.className = 'preview-item';
+    item.dataset.dir = dir;
+
+    let thumbHTML;
+    if (isCubemap) {
+      thumbHTML = `<div class="preview-thumb">
+        <img src="${capturedImages[dir]}" alt="${dir}" />
+        <button class="preview-download" title="Save ${dir}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+        </button>
+      </div>`;
+    } else {
+      thumbHTML = `<div class="preview-thumb">
+        <img src="${capturedImages[dir]}" alt="${dir}" />
+      </div>`;
+    }
+
+    item.innerHTML = `${thumbHTML}<span>${dir.charAt(0).toUpperCase() + dir.slice(1)}</span>`;
+    previewGrid.appendChild(item);
+  }
+
+  if (isCubemap) {
+    previewGrid.querySelectorAll('.preview-download').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const dir = btn.closest('.preview-item').dataset.dir;
+        if (!capturedImages || !capturedImages[dir]) return;
+
+        const format = exportFormat.value;
+        const ext = format === 'jpeg' ? 'jpg' : 'png';
+        const filePath = await save({
+          defaultPath: `panorama_${dir}_${sourceBaseName()}.${ext}`,
+          filters: [{ name: format.toUpperCase(), extensions: [ext] }]
+        });
+        if (!filePath) return;
+
+        try {
+          enterSaveState('Saving...');
+          flushPaint();
+          await invoke('save_image', {
+            dataUrl: capturedImages[dir],
+            outputPath: filePath,
+          });
+          SAVE_BTN.textContent = 'Saved';
+          imageInfo.textContent = `Saved: ${dir}`;
+        } catch (err) {
+          SAVE_BTN.textContent = 'Failed';
+          imageInfo.textContent = 'Save failed: ' + err;
+        } finally {
+          setTimeout(() => exitSaveState(), 1200);
+        }
+      });
+    });
+
+    previewGrid.querySelectorAll('.preview-thumb').forEach(thumb => {
+      thumb.addEventListener('click', (e) => {
+        if (e.target.closest('.preview-download')) return;
+        const dir = thumb.closest('.preview-item').dataset.dir;
+        if (!capturedImages || !capturedImages[dir]) return;
+
+        lightboxImg.src = capturedImages[dir];
+        lightbox.querySelector('.lightbox-content').dataset.mode = dialogMode;
+        lightbox.classList.remove('hidden', 'unfocused');
+      });
+    });
+  }
+
+  btnSaveMerged.innerHTML = isCubemap
+    ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Save 3x2 Merged`
+    : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Save Image`;
 
   exportDialog.classList.remove('hidden', 'unfocused');
   exportDialog.querySelector('.dialog-content').focus();
@@ -258,9 +373,13 @@ function hideExportDialog() {
 // Close button (only way to truly close)
 exportDialog.querySelector('.dialog-close').addEventListener('click', () => hideExportDialog());
 
-// Backdrop click → shrink (do NOT close)
+// Backdrop click → behavior depends on mode
 exportDialog.querySelector('.dialog-backdrop').addEventListener('click', () => {
-  exportDialog.classList.add('unfocused');
+  if (dialogMode === 'cubemap') {
+    hideExportDialog();
+  } else {
+    exportDialog.classList.add('unfocused');
+  }
 });
 
 // Click shrunk dialog → restore with animation
@@ -274,17 +393,25 @@ dialogContent.addEventListener('click', (e) => {
   }
 });
 
-// Any interaction outside dialog → shrink
+// Any interaction outside dialog → behavior depends on mode
 viewerContainer.addEventListener('mousedown', () => {
   if (!exportDialog.classList.contains('hidden')) {
-    exportDialog.classList.add('unfocused');
+    if (dialogMode === 'cubemap') {
+      hideExportDialog();
+    } else {
+      exportDialog.classList.add('unfocused');
+    }
   }
 });
 
-// Toolbar interactions also trigger shrink
+// Toolbar interactions also branch on mode
 document.getElementById('toolbar').addEventListener('mousedown', () => {
   if (!exportDialog.classList.contains('hidden')) {
-    exportDialog.classList.add('unfocused');
+    if (dialogMode === 'cubemap') {
+      hideExportDialog();
+    } else {
+      exportDialog.classList.add('unfocused');
+    }
   }
 });
 
@@ -332,50 +459,7 @@ function sourceBaseName() {
   return currentImagePath.replace(/.*[\\/]/, '').replace(/\.[^.]+$/, '');
 }
 
-// --- Individual download buttons on preview items ---
-document.querySelectorAll('.preview-download').forEach(btn => {
-  btn.addEventListener('click', async (e) => {
-    e.stopPropagation();
-    const dir = btn.closest('.preview-item').dataset.dir;
-    if (!capturedImages || !capturedImages[dir]) return;
-
-    const format = exportFormat.value;
-    const ext = format === 'jpeg' ? 'jpg' : 'png';
-    const filePath = await save({
-      defaultPath: `panorama_${dir}_${sourceBaseName()}.${ext}`,
-      filters: [{ name: format.toUpperCase(), extensions: [ext] }]
-    });
-    if (!filePath) return;
-
-    try {
-      enterSaveState('Saving...');
-      flushPaint();
-      await invoke('save_image', {
-        dataUrl: capturedImages[dir],
-        outputPath: filePath,
-      });
-      SAVE_BTN.textContent = 'Saved';
-      imageInfo.textContent = `Saved: ${dir}`;
-    } catch (err) {
-      SAVE_BTN.textContent = 'Failed';
-      imageInfo.textContent = 'Save failed: ' + err;
-    } finally {
-      setTimeout(() => exitSaveState(), 1200);
-    }
-  });
-});
-
-// --- Lightbox: click preview image to enlarge ---
-document.querySelectorAll('.preview-thumb').forEach(thumb => {
-  thumb.addEventListener('click', (e) => {
-    if (e.target.closest('.preview-download')) return;
-    const dir = thumb.closest('.preview-item').dataset.dir;
-    if (!capturedImages || !capturedImages[dir]) return;
-
-    lightboxImg.src = capturedImages[dir];
-    lightbox.classList.remove('hidden', 'unfocused');
-  });
-});
+// --- Individual download & lightbox now wired dynamically in showExportDialog() ---
 
 // Lightbox close → return to export dialog
 function closeLightbox() {
@@ -386,24 +470,34 @@ function closeLightbox() {
 lightbox.querySelector('.dialog-close').addEventListener('click', closeLightbox);
 lightbox.querySelector('.dialog-backdrop').addEventListener('click', closeLightbox);
 
-// --- Save Merged (2x2 grid only) ---
+// --- Save Merged (mode-aware) ---
 btnSaveMerged.addEventListener('click', async () => {
   const format = exportFormat.value;
   const quality = parseInt(exportQuality.value);
 
   const ext = format === 'jpeg' ? 'jpg' : 'png';
+  const isCubemap = dialogMode === 'cubemap';
+  const defaultName = isCubemap
+    ? `cubemap_${sourceBaseName()}.${ext}`
+    : `screenshot_${sourceBaseName()}.${ext}`;
+
   const filePath = await save({
-    defaultPath: `panorama_merged_${sourceBaseName()}.${ext}`,
+    defaultPath: defaultName,
     filters: [{ name: format.toUpperCase(), extensions: [ext] }]
   });
   if (!filePath) return;
 
   try {
-    enterSaveState('Merging...');
+    enterSaveState(isCubemap ? 'Merging...' : 'Saving...');
     flushPaint();
     await invoke('merge_images', {
-      images: [capturedImages.front, capturedImages.right, capturedImages.back, capturedImages.left],
-      options: { layout: 'grid', format, quality },
+      images: Object.values(capturedImages),
+      options: {
+        layout: isCubemap ? 'grid' : 'horizontal',
+        format,
+        quality,
+        columns: isCubemap ? 3 : undefined,
+      },
       outputPath: filePath,
     });
     SAVE_BTN.textContent = 'Saved';
@@ -425,8 +519,11 @@ document.addEventListener('keydown', (e) => {
     case 'o':
       openPanorama();
       break;
+    case 's':
+      if (!btnScreenshot.disabled) doScreenshot();
+      break;
     case 'c':
-      if (!btnCapture.disabled) doCapture();
+      if (!btnCubemap.disabled) showCubemapDialog();
       break;
     case 'e':
       if (!btnExport.disabled) showExportDialog();
@@ -490,10 +587,14 @@ document.addEventListener('paste', async (e) => {
         await viewer.loadTexture(dataUrl);
         currentImagePath = null;
         emptyState.classList.add('hidden');
-        btnCapture.disabled = false;
+        btnScreenshot.disabled = false;
+        btnCubemap.disabled = true;
         capturedImages = null;
+        cubemapImages = null;
         btnExport.disabled = true;
         imageInfo.textContent = `${file.name || 'Pasted'} (clipboard)`;
+
+        _generateCubemap();
       } catch (err) {
         imageInfo.textContent = 'Paste error: ' + err;
       }
