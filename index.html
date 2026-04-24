@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>360 Panorama Viewer</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Toolbar -->
+    <div id="toolbar">
+      <div class="tool-group">
+        <button id="btn-open" title="Open Panorama (O)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="tool-group">
+        <label for="fov-slider" class="tool-label">FOV</label>
+        <input type="range" id="fov-slider" min="30" max="120" value="90" />
+        <span id="fov-value" class="tool-value">90°</span>
+      </div>
+
+      <div class="tool-separator"></div>
+
+      <div class="tool-group">
+        <button id="btn-capture" title="Capture 4 Directions (C)" disabled>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
+        </button>
+        <button id="btn-export" title="Export (E)" disabled>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="tool-spacer"></div>
+
+      <div class="tool-info">
+        <span id="image-info">No image loaded</span>
+      </div>
+    </div>
+
+    <!-- 3D Viewer Container -->
+    <div id="viewer"></div>
+
+    <!-- Empty state overlay -->
+    <div id="empty-state">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M2 12h20"/>
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+      </svg>
+      <p>Drop a panorama image here or click Open</p>
+      <p class="hint">Supports JPG, PNG, WebP, BMP</p>
+    </div>
+
+    <!-- Export Dialog -->
+    <div id="export-dialog" class="dialog hidden">
+      <div class="dialog-backdrop"></div>
+      <div class="dialog-content">
+        <h2>Export Screenshots</h2>
+
+        <div id="preview-grid">
+          <div class="preview-item">
+            <img id="preview-front" alt="Front" />
+            <span>Front</span>
+          </div>
+          <div class="preview-item">
+            <img id="preview-right" alt="Right" />
+            <span>Right</span>
+          </div>
+          <div class="preview-item">
+            <img id="preview-back" alt="Back" />
+            <span>Back</span>
+          </div>
+          <div class="preview-item">
+            <img id="preview-left" alt="Left" />
+            <span>Left</span>
+          </div>
+        </div>
+
+        <div class="export-options">
+          <div class="option-row">
+            <label for="export-layout">Layout:</label>
+            <select id="export-layout">
+              <option value="grid">2x2 Grid</option>
+              <option value="horizontal">1x4 Horizontal</option>
+            </select>
+          </div>
+          <div class="option-row">
+            <label for="export-format">Format:</label>
+            <select id="export-format">
+              <option value="png">PNG</option>
+              <option value="jpeg">JPEG</option>
+            </select>
+          </div>
+          <div class="option-row" id="quality-row">
+            <label for="export-quality">Quality:</label>
+            <input type="range" id="export-quality" min="1" max="100" value="95" />
+            <span id="quality-value">95%</span>
+          </div>
+        </div>
+
+        <div class="dialog-actions">
+          <button id="btn-save-merged" class="btn-primary">Save Merged</button>
+          <button id="btn-save-individual">Save Individual</button>
+          <button id="btn-cancel-export">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Drop zone overlay -->
+    <div id="drop-zone" class="hidden">
+      <div class="drop-zone-content">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <p>Drop panorama image here</p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/main.js"></script>
+</body>
+</html>
