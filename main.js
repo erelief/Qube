@@ -154,7 +154,6 @@ dialogContent.addEventListener('click', (e) => {
     exportDialog.classList.remove('unfocused');
     exportDialog.classList.add('restoring');
     e.stopPropagation();
-    // Remove restoring class after animation completes
     setTimeout(() => exportDialog.classList.remove('restoring'), 400);
   }
 });
@@ -182,29 +181,70 @@ exportQuality.addEventListener('input', () => {
   qualityValue.textContent = exportQuality.value + '%';
 });
 
+// --- Save progress & blocking ---
+// All save progress shows on btnSaveMerged.
+// CSS spinner runs on compositor thread — stays animated even when
+// Tauri invoke() blocks the JS main thread.
+
+const SAVE_BTN = btnSaveMerged;
+const SAVE_LOCKED_SEL = '.preview-download, .preview-thumb, #btn-save-merged';
+
+function enterSaveState(label) {
+  SAVE_BTN.classList.add('btn-saving');
+  SAVE_BTN.disabled = true;
+  SAVE_BTN._saveOrigHTML = SAVE_BTN.innerHTML;
+  SAVE_BTN.textContent = label;
+  document.querySelectorAll(SAVE_LOCKED_SEL).forEach(b => { b.style.pointerEvents = 'none'; });
+}
+
+function exitSaveState() {
+  SAVE_BTN.classList.remove('btn-saving');
+  SAVE_BTN.disabled = false;
+  SAVE_BTN.innerHTML = SAVE_BTN._saveOrigHTML;
+  delete SAVE_BTN._saveOrigHTML;
+  document.querySelectorAll(SAVE_LOCKED_SEL).forEach(b => { b.style.pointerEvents = ''; });
+}
+
+/** Force synchronous reflow so spinner paints before invoke blocks the thread */
+function flushPaint() {
+  void SAVE_BTN.offsetHeight;
+}
+
+/** Extract base filename (without extension) from currentImagePath */
+function sourceBaseName() {
+  if (!currentImagePath) return '';
+  return currentImagePath.replace(/.*[\\/]/, '').replace(/\.[^.]+$/, '');
+}
+
 // --- Individual download buttons on preview items ---
 document.querySelectorAll('.preview-download').forEach(btn => {
   btn.addEventListener('click', async (e) => {
-    e.stopPropagation(); // don't open lightbox
+    e.stopPropagation();
     const dir = btn.closest('.preview-item').dataset.dir;
     if (!capturedImages || !capturedImages[dir]) return;
 
     const format = exportFormat.value;
     const ext = format === 'jpeg' ? 'jpg' : 'png';
     const filePath = await save({
-      defaultPath: `panorama_${dir}.${ext}`,
+      defaultPath: `panorama_${dir}_${sourceBaseName()}.${ext}`,
       filters: [{ name: format.toUpperCase(), extensions: [ext] }]
     });
     if (!filePath) return;
 
     try {
+      enterSaveState('Saving...');
+      flushPaint();
       await invoke('save_image', {
         dataUrl: capturedImages[dir],
         outputPath: filePath,
       });
+      SAVE_BTN.textContent = 'Saved';
       imageInfo.textContent = `Saved: ${dir}`;
     } catch (err) {
+      SAVE_BTN.textContent = 'Failed';
       imageInfo.textContent = 'Save failed: ' + err;
+    } finally {
+      setTimeout(() => exitSaveState(), 1200);
     }
   });
 });
@@ -212,7 +252,7 @@ document.querySelectorAll('.preview-download').forEach(btn => {
 // --- Lightbox: click preview image to enlarge ---
 document.querySelectorAll('.preview-thumb').forEach(thumb => {
   thumb.addEventListener('click', (e) => {
-    if (e.target.closest('.preview-download')) return; // download button handled above
+    if (e.target.closest('.preview-download')) return;
     const dir = thumb.closest('.preview-item').dataset.dir;
     if (!capturedImages || !capturedImages[dir]) return;
 
@@ -237,22 +277,27 @@ btnSaveMerged.addEventListener('click', async () => {
 
   const ext = format === 'jpeg' ? 'jpg' : 'png';
   const filePath = await save({
-    defaultPath: `panorama_merged.${ext}`,
+    defaultPath: `panorama_merged_${sourceBaseName()}.${ext}`,
     filters: [{ name: format.toUpperCase(), extensions: [ext] }]
   });
   if (!filePath) return;
 
   try {
+    enterSaveState('Merging...');
+    flushPaint();
     await invoke('merge_images', {
       images: [capturedImages.front, capturedImages.right, capturedImages.back, capturedImages.left],
       options: { layout: 'grid', format, quality },
       outputPath: filePath,
     });
+    SAVE_BTN.textContent = 'Saved';
     imageInfo.textContent = 'Saved: ' + filePath;
-    hideExportDialog();
   } catch (err) {
+    SAVE_BTN.textContent = 'Failed';
     imageInfo.textContent = 'Save failed: ' + err;
     console.error('Merge save error:', err);
+  } finally {
+    setTimeout(() => exitSaveState(), 1200);
   }
 });
 
