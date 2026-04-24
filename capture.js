@@ -16,7 +16,7 @@ export class ScreenshotCapture {
     this.renderHeight = height;
   }
 
-  captureFourDirections(scene, yaw) {
+  captureFourDirections(scene, yaw, pitch) {
     const camera = new THREE.PerspectiveCamera(
       this.fov,
       this.renderWidth / this.renderHeight,
@@ -34,16 +34,16 @@ export class ScreenshotCapture {
     );
 
     const directions = [
-      { name: 'front', yaw: yaw },
-      { name: 'right', yaw: yaw - Math.PI / 2 },
-      { name: 'back', yaw: yaw + Math.PI },
-      { name: 'left', yaw: yaw + Math.PI / 2 },
+      { name: 'front', yaw: yaw, pitch: pitch },
+      { name: 'right', yaw: yaw - Math.PI / 2, pitch: pitch },
+      { name: 'back', yaw: yaw + Math.PI, pitch: -pitch },
+      { name: 'left', yaw: yaw + Math.PI / 2, pitch: pitch },
     ];
 
     const results = {};
 
     for (const dir of directions) {
-      const euler = new THREE.Euler(0, dir.yaw, 0, 'YXZ');
+      const euler = new THREE.Euler(dir.pitch, dir.yaw, 0, 'YXZ');
       camera.quaternion.setFromEuler(euler);
 
       renderer.setRenderTarget(renderTarget);

@@ -102,8 +102,8 @@ async function doCapture() {
   await new Promise(r => setTimeout(r, 50));
 
   try {
-    const { yaw } = viewer.getYawPitch();
-    capturedImages = capture.captureFourDirections(viewer.getScene(), yaw);
+    const { yaw, pitch } = viewer.getYawPitch();
+    capturedImages = capture.captureFourDirections(viewer.getScene(), yaw, pitch);
 
     btnExport.disabled = false;
     imageInfo.textContent = 'Captured 4 directions';
@@ -198,8 +198,8 @@ document.querySelectorAll('.preview-download').forEach(btn => {
 
     try {
       await invoke('save_image', {
-        data_url: capturedImages[dir],
-        output_path: filePath,
+        dataUrl: capturedImages[dir],
+        outputPath: filePath,
       });
       imageInfo.textContent = `Saved: ${dir}`;
     } catch (err) {
@@ -245,7 +245,7 @@ btnSaveMerged.addEventListener('click', async () => {
     await invoke('merge_images', {
       images: [capturedImages.front, capturedImages.right, capturedImages.back, capturedImages.left],
       options: { layout: 'grid', format, quality },
-      output_path: filePath,
+      outputPath: filePath,
     });
     imageInfo.textContent = 'Saved: ' + filePath;
     hideExportDialog();
@@ -282,6 +282,7 @@ document.addEventListener('keydown', (e) => {
 // --- Drag and Drop ---
 document.addEventListener('dragover', (e) => {
   e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
   dropZone.classList.remove('hidden');
 });
 
@@ -302,11 +303,37 @@ document.addEventListener('drop', async (e) => {
   const ext = file.name.split('.').pop().toLowerCase();
   if (!['jpg', 'jpeg', 'png', 'webp', 'bmp', 'gif'].includes(ext)) return;
 
-  const path = file.path || (file instanceof File && file.name);
-  if (path) {
-    await loadPanorama(path);
+  // Prefer native filesystem path (Tauri provides file.path for OS drops)
+  if (file.path) {
+    await loadPanorama(file.path);
+    return;
+  }
+
+  // Fallback: read file as data URL directly in JS
+  try {
+    imageInfo.textContent = 'Loading...';
+    const dataUrl = await readFileAsDataUrl(file);
+    await viewer.loadTexture(dataUrl);
+    currentImagePath = null;
+    emptyState.classList.add('hidden');
+    btnCapture.disabled = false;
+    capturedImages = null;
+    btnExport.disabled = true;
+    imageInfo.textContent = `${file.name} (dropped)`;
+  } catch (err) {
+    imageInfo.textContent = 'Drop error: ' + err;
+    console.error('Drop load error:', err);
   }
 });
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
 
 // Initialize quality row visibility
 qualityRow.style.display = 'none';
