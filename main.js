@@ -18,7 +18,6 @@ let viewer = null;
 let capture = null;
 let capturedImages = null;
 let captureResult = null;
-let cubemapImages = null;
 let dialogMode = null;
 let currentImagePath = null;
 let currentAspect = DEFAULT_ASPECT;
@@ -109,16 +108,12 @@ async function loadPanorama(path) {
 
     emptyState.classList.add('hidden');
     btnCapture.disabled = false;
-    btnCubemap.disabled = true;
+    btnCubemap.disabled = false;
     capturedImages = null;
     captureResult = null;
-    cubemapImages = null;
     btnExport.disabled = true;
 
     imageInfo.textContent = `${info.width} x ${info.height}`;
-
-    // Generate cubemap in background
-    _generateCubemap();
   } catch (err) {
     imageInfo.textContent = 'Error: ' + err;
     console.error('Failed to load panorama:', err);
@@ -252,24 +247,32 @@ async function doCapture() {
   btnCapture.disabled = false;
 }
 
-// --- Cubemap (6 faces, generated on image load) ---
-btnCubemap.addEventListener('click', () => showCubemapDialog());
+// --- Cubemap (6 faces, capture on click) ---
+btnCubemap.addEventListener('click', () => doCubemap());
 
-function showCubemapDialog() {
-  if (!cubemapImages) return;
-  capturedImages = cubemapImages;
-  dialogMode = 'cubemap';
-  showExportDialog();
-}
+async function doCubemap() {
+  if (!currentImagePath) return;
 
-async function _generateCubemap() {
+  btnCubemap.disabled = true;
+  imageInfo.textContent = 'Capturing cubemap...';
+
+  await new Promise(r => setTimeout(r, 50));
+
   try {
-    cubemapImages = capture.captureSixFaces(viewer.getScene());
-    btnCubemap.disabled = false;
-    imageInfo.textContent = `${imageInfo.textContent.split(' — ')[0]} — Cubemap ready`;
+    const { yaw } = viewer.getYawPitch();
+    capturedImages = capture.captureSixFaces(viewer.getScene(), yaw);
+    dialogMode = 'cubemap';
+
+    btnExport.disabled = false;
+    imageInfo.textContent = 'Captured 6 faces';
+
+    showExportDialog();
   } catch (err) {
-    console.error('Cubemap generation error:', err);
+    imageInfo.textContent = 'Cubemap capture failed: ' + err;
+    console.error('Cubemap error:', err);
   }
+
+  btnCubemap.disabled = false;
 }
 
 // --- Export Dialog ---
@@ -596,14 +599,11 @@ document.addEventListener('paste', async (e) => {
         currentImagePath = null;
         emptyState.classList.add('hidden');
         btnCapture.disabled = false;
-        btnCubemap.disabled = true;
+        btnCubemap.disabled = false;
         capturedImages = null;
         captureResult = null;
-        cubemapImages = null;
         btnExport.disabled = true;
         imageInfo.textContent = `${file.name || 'Pasted'} (clipboard)`;
-
-        _generateCubemap();
       } catch (err) {
         imageInfo.textContent = 'Paste error: ' + err;
       }

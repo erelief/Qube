@@ -53,7 +53,7 @@ export class ScreenshotCapture {
     return result;
   }
 
-  captureSixFaces(scene) {
+  captureSixFaces(scene, yaw) {
     const size = this.renderWidth;
     const camera = new THREE.PerspectiveCamera(90, 1, 0.1, 1000);
     camera.position.set(0, 0, 0.01);
@@ -66,12 +66,12 @@ export class ScreenshotCapture {
     renderTarget.texture.colorSpace = THREE.SRGBColorSpace;
 
     const directions = [
-      { name: 'front', yaw: 0, pitch: 0 },
-      { name: 'right', yaw: -Math.PI / 2, pitch: 0 },
-      { name: 'back', yaw: Math.PI, pitch: 0 },
-      { name: 'left', yaw: Math.PI / 2, pitch: 0 },
-      { name: 'up', yaw: 0, pitch: Math.PI / 2 },
-      { name: 'down', yaw: 0, pitch: -Math.PI / 2 },
+      { name: 'front', yaw: yaw,           pitch: 0 },
+      { name: 'right', yaw: yaw - Math.PI / 2, pitch: 0 },
+      { name: 'back',  yaw: yaw + Math.PI,     pitch: 0 },
+      { name: 'left',  yaw: yaw + Math.PI / 2, pitch: 0 },
+      { name: 'up',    yaw: yaw,               pitch: Math.PI / 2 },
+      { name: 'down',  yaw: yaw,               pitch: -Math.PI / 2 },
     ];
 
     const results = {};
