@@ -33,6 +33,7 @@ let currentAspect = DEFAULT_ASPECT;
 let maskVisible = true;
 let labelVisible = true;
 let rawCubemapImages = null;
+let frameVisible = false;
 
 // DOM elements — toolbar
 const btnOpen = document.getElementById('btn-open');
@@ -53,6 +54,9 @@ const qualityRow = document.getElementById('quality-row');
 const labelRow = document.getElementById('label-row');
 const btnLabelToggle = document.getElementById('btn-label-toggle');
 const labelStatus = document.getElementById('label-status');
+const frameRow = document.getElementById('frame-row');
+const btnFrameToggle = document.getElementById('btn-frame-toggle');
+const frameStatus = document.getElementById('frame-status');
 const btnSaveMerged = document.getElementById('btn-save-merged');
 
 // DOM elements — lightbox
@@ -255,6 +259,12 @@ async function _toggleLabel() {
   }
 }
 
+function _toggleFrame() {
+  frameVisible = !frameVisible;
+  btnFrameToggle.classList.toggle('active', frameVisible);
+  frameStatus.textContent = frameVisible ? 'On' : 'Off';
+}
+
 // Wire up focal option buttons
 document.querySelectorAll('.focal-option').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -270,6 +280,9 @@ document.getElementById('btn-mask-toggle').addEventListener('click', () => _togg
 
 // Wire up label toggle button (inside export dialog)
 btnLabelToggle.addEventListener('click', () => _toggleLabel());
+
+// Wire up frame toggle button (inside export dialog)
+btnFrameToggle.addEventListener('click', () => _toggleFrame());
 
 // ResizeObserver to keep mask geometry in sync
 const viewerResizeObserver = new ResizeObserver(() => {
@@ -328,8 +341,8 @@ function applyLabelToImage(dataUrl, label) {
 
       ctx.drawImage(img, 0, 0);
 
-      const padding = Math.round(canvas.width * 0.04);
-      const fontSize = Math.round(canvas.width * 0.032);
+      const padding = Math.round(canvas.width * 0.06);
+      const fontSize = Math.round(canvas.width * 0.048);
       ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
       const textWidth = ctx.measureText(label).width;
       const bgWidth = Math.round(textWidth + padding * 2);
@@ -341,6 +354,43 @@ function applyLabelToImage(dataUrl, label) {
       ctx.fillStyle = '#ffffff';
       ctx.textBaseline = 'top';
       ctx.fillText(label, padding, (bgHeight - fontSize) / 2);
+
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
+
+// Edge definitions for each face in a 3x2 cubemap grid
+const FRAME_EDGES = {
+  front: { right: true, bottom: true },
+  right: { left: true, right: true, bottom: true },
+  back:  { left: true, bottom: true },
+  left:  { right: true, top: true },
+  up:    { left: true, right: true, top: true },
+  down:  { left: true, top: true },
+};
+const FRAME_PX = 4;
+
+function applyFrameToImage(dataUrl, edges) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+
+      ctx.drawImage(img, 0, 0);
+      ctx.fillStyle = '#000000';
+
+      const w = canvas.width;
+      const h = canvas.height;
+      if (edges.left)   ctx.fillRect(0, 0, FRAME_PX, h);
+      if (edges.right)  ctx.fillRect(w - FRAME_PX, 0, FRAME_PX, h);
+      if (edges.top)    ctx.fillRect(0, 0, w, FRAME_PX);
+      if (edges.bottom) ctx.fillRect(0, h - FRAME_PX, w, FRAME_PX);
 
       resolve(canvas.toDataURL('image/png'));
     };
@@ -399,10 +449,14 @@ function showExportDialog() {
   const isCubemap = dialogMode === 'cubemap';
   document.getElementById('dialog-title').textContent = isCubemap ? 'Cubemap' : 'Capture';
 
-  // Show label toggle row only for cubemap mode
+  // Show label/frame toggle rows only for cubemap mode
   labelRow.style.display = isCubemap ? 'flex' : 'none';
   btnLabelToggle.classList.toggle('active', labelVisible);
   labelStatus.textContent = labelVisible ? 'On' : 'Off';
+
+  frameRow.style.display = isCubemap ? 'flex' : 'none';
+  btnFrameToggle.classList.toggle('active', frameVisible);
+  frameStatus.textContent = frameVisible ? 'On' : 'Off';
 
   for (const dir of dirs) {
     const item = document.createElement('div');
@@ -422,7 +476,8 @@ function showExportDialog() {
         </button>
       </div>`;
     } else {
-      thumbHTML = `<div class="preview-thumb">
+      const ratio = ASPECT_RATIOS[currentAspect].ratio;
+      thumbHTML = `<div class="preview-thumb" style="aspect-ratio: ${ratio}">
         <img src="${capturedImages[dir]}" alt="${dir}" />
       </div>`;
     }
@@ -574,8 +629,22 @@ btnSaveMerged.addEventListener('click', async () => {
   try {
     enterSaveState(isCubemap ? 'Merging...' : 'Saving...');
     flushPaint();
+
+    // Apply frame borders for cubemap merged output only
+    let saveImages = Object.values(capturedImages);
+    if (isCubemap && frameVisible) {
+      const faceOrder = ['front', 'right', 'back', 'left', 'up', 'down'];
+      saveImages = await Promise.all(
+        faceOrder.map(face =>
+          capturedImages[face]
+            ? applyFrameToImage(capturedImages[face], FRAME_EDGES[face])
+            : null
+        )
+      );
+    }
+
     await invoke('merge_images', {
-      images: Object.values(capturedImages),
+      images: saveImages,
       options: {
         layout: isCubemap ? 'grid' : 'horizontal',
         format,
@@ -586,6 +655,7 @@ btnSaveMerged.addEventListener('click', async () => {
     });
     SAVE_BTN.textContent = 'Saved';
     imageInfo.textContent = 'Saved: ' + filePath;
+    setTimeout(() => hideExportDialog(), 600);
   } catch (err) {
     SAVE_BTN.textContent = 'Failed';
     imageInfo.textContent = 'Save failed: ' + err;

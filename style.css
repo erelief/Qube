@@ -388,7 +388,7 @@ input[type="range"]::-webkit-slider-thumb {
 }
 #preview-grid[data-mode="capture"] .preview-thumb {
   max-width: 400px;
-  max-height: 300px;
+  max-height: 400px;
 }
 #preview-grid[data-mode="capture"] .preview-download {
   display: none;
@@ -544,6 +544,41 @@ input[type="range"]::-webkit-slider-thumb {
   color: var(--text-secondary);
   min-width: 22px;
 }
+.help-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  color: var(--text-secondary);
+  cursor: default;
+  pointer-events: auto;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+.help-icon:hover {
+  opacity: 1;
+}
+.help-icon::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 5px 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  color: #fff;
+  background: rgba(30, 30, 58, 0.95);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.help-icon:hover::after {
+  opacity: 1;
+}
 
 /* ===== Dialog Actions ===== */
 .dialog-actions {
@@ -576,19 +611,17 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 /* Save progress spinner */
-.btn-saving { position: relative; pointer-events: none; opacity: 0.8; }
+.btn-saving { display: inline-flex; align-items: center; gap: 8px; pointer-events: none; opacity: 0.8; }
 .btn-saving::after {
   content: '';
-  position: absolute;
   width: 16px; height: 16px;
   border: 2px solid #fff3;
   border-top-color: #fff;
   border-radius: 50%;
   animation: btn-spin 0.6s linear infinite;
-  right: 10px; top: 50%;
-  transform: translateY(-50%);
+  flex-shrink: 0;
 }
-@keyframes btn-spin { to { transform: translateY(-50%) rotate(360deg); } }
+@keyframes btn-spin { to { transform: rotate(360deg); } }
 
 /* ===== Lightbox ===== */
 .lightbox-content {

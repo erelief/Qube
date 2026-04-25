@@ -22,31 +22,20 @@ Cubemaps are essential for environment lighting, reflections, and skyboxes in 3D
 - **One-click conversion** — Load an equirectangular image, click capture, done.
 - **Live 3D preview** — See your cubemap applied to a sphere in real time before exporting.
 - **Multiple export formats** — PNG cubemap faces, ready to drop into any engine.
-- **Drag & drop** — Just drag your HDR/EXR file onto the window.
-- **Cross-platform** — Windows, macOS, Linux.
+- **Drag & drop** — Just drag your 360° panorama image onto the window.
+- **Cross-platform** — Windows, macOS.
 
 ## Quick Start
 
 1. Download the latest release for your platform.
 2. Open Q°ube.
 3. Drag in an equirectangular HDR or EXR image (or use File > Open).
-4. Click **Cubemap** to generate the cubemap.
-5. Preview the result in the 3D viewer — rotate to inspect every face.
+4. Preview the 360° panorama image in the 3D viewer — rotate to inspect every face.
+5. Click **Capture/Cubemap** to generate image(s).
 6. Export when you're happy.
 
 That's it. No config files, no command line, no fuss.
 
-## Screenshots
-
-*(Add screenshots here)*
-
-## Supported Formats
-
-| Input | Output |
-|-------|--------|
-| HDR (.hdr) | Cubemap faces (PNG) |
-| EXR (.exr) | Cubemap faces (PNG) |
-| JPG / PNG | Cubemap faces (PNG) |
 
 ## Tech Stack
 
