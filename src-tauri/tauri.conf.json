@@ -1,6 +1,6 @@
 {
   "productName": "Q°ube",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "identifier": "com.qube.app",
   "build": {
     "beforeDevCommand": "npm run dev",
