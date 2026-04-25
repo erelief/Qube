@@ -91,6 +91,24 @@ export class PanoramaViewer {
     };
   }
 
+  resetPitch() {
+    const { yaw } = this.getYawPitch();
+    const distance = this.camera.position.distanceTo(this.controls.target);
+
+    // offset = target -> camera, which is opposite to the look direction
+    const offset = new THREE.Vector3(
+      -distance * Math.sin(yaw),
+      0,
+      -distance * Math.cos(yaw)
+    );
+
+    this.camera.position.copy(this.controls.target).add(offset);
+    this.camera.lookAt(this.controls.target);
+
+    // Sync OrbitControls internal state so the next frame doesn't snap back
+    this.controls.update();
+  }
+
   getScene() {
     return this.scene;
   }

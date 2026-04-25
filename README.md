@@ -5,24 +5,17 @@
 </p>
 
 
-**One-click cubemap generator for 3D artists and game developers.**
+**One-click cubemap generator.**
 
-Drop in any equirectangular HDR/EXR image — get a ready-to-use cubemap instantly.
+Drop in any 360° panorama image — get a ready-to-use capture/cubemap instantly.
 
 ![Tauri](https://img.shields.io/badge/built%20with-Tauri-blueviolet) ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Why Q°ube?
 
-Cubemaps are essential for environment lighting, reflections, and skyboxes in 3D engines. But converting equirectangular images into proper cubemap formats is usually a pain — command-line tools, confusing parameters, wrong orientations, missing faces...
-
-**Q°ube solves this with one click.**
-
-## Features
-
-- **One-click conversion** — Load an equirectangular image, click capture, done.
-- **Live 3D preview** — See your cubemap applied to a sphere in real time before exporting.
+- **Live 3D preview** — See your 360° panorama image applied to a sphere in real time before exporting.
+- **One-click conversion** — Load an 360° panorama image, click capture, done.
 - **Multiple export formats** — PNG cubemap faces, ready to drop into any engine.
-- **Drag & drop** — Just drag your 360° panorama image onto the window.
 - **Cross-platform** — Windows, macOS.
 
 ## Quick Start

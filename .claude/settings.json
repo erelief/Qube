@@ -23,7 +23,9 @@
       "Bash(curl -s http://localhost:5173/viewer.js)",
       "Bash(curl -s http://localhost:5173/capture.js)",
       "Read(//tmp/**)",
-      "Read(//c/tmp/**)"
+      "Read(//c/tmp/**)",
+      "Bash(node -e \"require\\('fs'\\).readFileSync\\('main.js','utf8'\\)\")",
+      "Bash(node --check main.js)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Hong\\Documents\\Works_temp\\360-camera\\docs\\superpowers"

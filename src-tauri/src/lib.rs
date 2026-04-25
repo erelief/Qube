@@ -91,6 +91,28 @@ pub fn save_image(data_url: String, output_path: String) -> Result<(), String> {
     fs::write(&output_path, bytes).map_err(|e| format!("Write error: {}", e))
 }
 
+pub fn write_image_to_clipboard(data_url: String) -> Result<(), String> {
+    let (_, base64_data) = data_url
+        .split_once(',')
+        .ok_or_else(|| "Invalid data URL".to_string())?;
+
+    let bytes = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, base64_data)
+        .map_err(|e| format!("Base64 decode error: {}", e))?;
+
+    if bytes.len() < 24 {
+        return Err("Image data too short".to_string());
+    }
+    // PNG: width at offset 16 (4 bytes BE), height at offset 20 (4 bytes BE)
+    let w = u32::from_be_bytes([bytes[16], bytes[17], bytes[18], bytes[19]]) as usize;
+    let h = u32::from_be_bytes([bytes[20], bytes[21], bytes[22], bytes[23]]) as usize;
+
+    let img = arboard::ImageData { width: w, height: h, bytes: bytes.as_slice().into() };
+
+    let mut clipboard = arboard::Clipboard::new().map_err(|e| format!("Clipboard error: {}", e))?;
+    clipboard.set_image(img).map_err(|e| format!("Failed to write to clipboard: {}", e))?;
+    Ok(())
+}
+
 pub fn merge_images(images: Vec<String>, options: MergeOptions, output_path: String) -> Result<(), String> {
     let mut decoded = Vec::new();
     for (i, data_url) in images.iter().enumerate() {
@@ -178,6 +200,11 @@ mod commands {
     pub fn merge_images(images: Vec<String>, options: super::MergeOptions, output_path: String) -> Result<(), String> {
         super::merge_images(images, options, output_path)
     }
+
+    #[tauri::command]
+    pub fn write_image_to_clipboard(data_url: String) -> Result<(), String> {
+        super::write_image_to_clipboard(data_url)
+    }
 }
 
 pub fn run() {
@@ -191,6 +218,7 @@ pub fn run() {
             commands::resize_image,
             commands::save_image,
             commands::merge_images,
+            commands::write_image_to_clipboard,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -38,7 +38,9 @@ let frameVisible = false;
 // DOM elements — toolbar
 const btnOpen = document.getElementById('btn-open');
 const btnCapture = document.getElementById('btn-capture');
+const btnCopy = document.getElementById('btn-copy');
 const btnCubemap = document.getElementById('btn-cubemap');
+const btnPitchReset = document.getElementById('btn-pitch-reset');
 const fovSlider = document.getElementById('fov-slider');
 const fovValue = document.getElementById('fov-value');
 const imageInfo = document.getElementById('image-info');
@@ -152,7 +154,9 @@ async function loadPanorama(path) {
 
     emptyState.classList.add('hidden');
     btnCapture.disabled = false;
+    btnCopy.disabled = false;
     btnCubemap.disabled = false;
+    btnPitchReset.disabled = false;
     capturedImages = null;
 
     imageInfo.textContent = `${info.width} x ${info.height}`;
@@ -278,6 +282,13 @@ document.querySelectorAll('.focal-option').forEach(btn => {
 // Wire up mask toggle button
 document.getElementById('btn-mask-toggle').addEventListener('click', () => _toggleMask());
 
+// Wire up pitch reset button
+function doPitchReset() {
+  if (!viewer) return;
+  viewer.resetPitch();
+}
+btnPitchReset.addEventListener('click', () => doPitchReset());
+
 // Wire up label toggle button (inside export dialog)
 btnLabelToggle.addEventListener('click', () => _toggleLabel());
 
@@ -322,6 +333,52 @@ async function doCapture() {
 
   btnCapture.disabled = false;
 }
+
+function getCurrentViewDataUrl() {
+  const { yaw, pitch } = viewer.getYawPitch();
+  const fov = parseInt(fovSlider.value);
+  const config = ASPECT_RATIOS[currentAspect];
+  const width = config.baseWidth;
+  const height = Math.round(config.baseWidth / config.ratio);
+  return capture.captureSingleView(viewer.getScene(), yaw, pitch, fov, width, height);
+}
+
+async function copyToClipboard() {
+  if (!currentImagePath || !viewer) return;
+
+  btnCopy.disabled = true;
+  imageInfo.textContent = 'Copying...';
+
+  await new Promise(r => setTimeout(r, 50));
+
+  try {
+    const dataUrl = getCurrentViewDataUrl();
+
+    try {
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+    } catch {
+      if (window.__TAURI_INTERNALS__) {
+        await invoke('write_image_to_clipboard', { dataUrl });
+      } else {
+        throw new Error('Clipboard not available');
+      }
+    }
+
+    imageInfo.innerHTML = `<span class="status-success">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-icon lucide-check"><path d="M20 6 9 17l-5-5"/></svg>
+      Copied to clipboard
+    </span>`;
+  } catch (err) {
+    imageInfo.textContent = 'Copy failed: ' + err;
+    console.error('Copy error:', err);
+  }
+
+  btnCopy.disabled = false;
+}
+
+btnCopy.addEventListener('click', () => copyToClipboard());
 
 // --- Cubemap (6 faces, capture on click) ---
 btnCubemap.addEventListener('click', () => doCubemap());
@@ -509,7 +566,7 @@ function showExportDialog() {
             outputPath: filePath,
           });
           SAVE_BTN.textContent = 'Saved';
-          imageInfo.textContent = `Saved: ${dir}`;
+          imageInfo.innerHTML = `<span class="status-success"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-icon lucide-check"><path d="M20 6 9 17l-5-5"/></svg>Saved: ${dir}</span>`;
         } catch (err) {
           SAVE_BTN.textContent = 'Failed';
           imageInfo.textContent = 'Save failed: ' + err;
@@ -654,7 +711,7 @@ btnSaveMerged.addEventListener('click', async () => {
       outputPath: filePath,
     });
     SAVE_BTN.textContent = 'Saved';
-    imageInfo.textContent = 'Saved: ' + filePath;
+    imageInfo.innerHTML = `<span class="status-success"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-icon lucide-check"><path d="M20 6 9 17l-5-5"/></svg>Saved: ${filePath}</span>`;
     setTimeout(() => hideExportDialog(), 600);
   } catch (err) {
     SAVE_BTN.textContent = 'Failed';
@@ -669,6 +726,12 @@ btnSaveMerged.addEventListener('click', async () => {
 document.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
 
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+    e.preventDefault();
+    if (!btnCopy.disabled) copyToClipboard();
+    return;
+  }
+
   switch (e.key.toLowerCase()) {
     case 'o':
       openPanorama();
@@ -681,6 +744,9 @@ document.addEventListener('keydown', (e) => {
       break;
     case 'm':
       _toggleMask();
+      break;
+    case 'p':
+      if (!btnPitchReset.disabled) doPitchReset();
       break;
     case '1':
       _applyAspectRatio('1:1');
@@ -741,7 +807,9 @@ document.addEventListener('paste', async (e) => {
         currentImagePath = null;
         emptyState.classList.add('hidden');
         btnCapture.disabled = false;
+        btnCopy.disabled = false;
         btnCubemap.disabled = false;
+        btnPitchReset.disabled = false;
         capturedImages = null;
         imageInfo.textContent = `${file.name || 'Pasted'} (clipboard)`;
       } catch (err) {
