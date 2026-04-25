@@ -15,6 +15,15 @@ const ASPECT_RATIOS = {
 };
 const DEFAULT_ASPECT = '1:1';
 
+const FACE_LABELS = {
+  front: 'Front',
+  right: 'Right',
+  back:  'Back',
+  left:  'Left',
+  up:    'Up',
+  down:  'Down',
+};
+
 let viewer = null;
 let capture = null;
 let capturedImages = null;
@@ -22,6 +31,8 @@ let dialogMode = null;
 let currentImagePath = null;
 let currentAspect = DEFAULT_ASPECT;
 let maskVisible = true;
+let labelVisible = true;
+let rawCubemapImages = null;
 
 // DOM elements — toolbar
 const btnOpen = document.getElementById('btn-open');
@@ -39,6 +50,9 @@ const exportFormat = document.getElementById('export-format');
 const exportQuality = document.getElementById('export-quality');
 const qualityValue = document.getElementById('quality-value');
 const qualityRow = document.getElementById('quality-row');
+const labelRow = document.getElementById('label-row');
+const btnLabelToggle = document.getElementById('btn-label-toggle');
+const labelStatus = document.getElementById('label-status');
 const btnSaveMerged = document.getElementById('btn-save-merged');
 
 // DOM elements — lightbox
@@ -217,6 +231,30 @@ function _toggleMask() {
   btn.classList.toggle('active', maskVisible);
 }
 
+async function _toggleLabel() {
+  labelVisible = !labelVisible;
+  btnLabelToggle.classList.toggle('active', labelVisible);
+  labelStatus.textContent = labelVisible ? 'On' : 'Off';
+
+  if (capturedImages && dialogMode === 'cubemap' && rawCubemapImages) {
+    for (const face of ['front', 'right', 'back', 'left', 'up', 'down']) {
+      if (rawCubemapImages[face]) {
+        capturedImages[face] = labelVisible
+          ? await applyLabelToImage(rawCubemapImages[face], FACE_LABELS[face])
+          : rawCubemapImages[face];
+      }
+    }
+
+    // Refresh preview grid images
+    document.querySelectorAll('#preview-grid .preview-item').forEach(item => {
+      const dir = item.dataset.dir;
+      if (capturedImages[dir]) {
+        item.querySelector('.preview-thumb img').src = capturedImages[dir];
+      }
+    });
+  }
+}
+
 // Wire up focal option buttons
 document.querySelectorAll('.focal-option').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -229,6 +267,9 @@ document.querySelectorAll('.focal-option').forEach(btn => {
 
 // Wire up mask toggle button
 document.getElementById('btn-mask-toggle').addEventListener('click', () => _toggleMask());
+
+// Wire up label toggle button (inside export dialog)
+btnLabelToggle.addEventListener('click', () => _toggleLabel());
 
 // ResizeObserver to keep mask geometry in sync
 const viewerResizeObserver = new ResizeObserver(() => {
@@ -272,6 +313,42 @@ async function doCapture() {
 // --- Cubemap (6 faces, capture on click) ---
 btnCubemap.addEventListener('click', () => doCubemap());
 
+/**
+ * Bakes a direction label into the top-left corner of an image dataURL.
+ * Returns a new dataURL with the label rendered as pixels.
+ */
+function applyLabelToImage(dataUrl, label) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+
+      ctx.drawImage(img, 0, 0);
+
+      const padding = Math.round(canvas.width * 0.04);
+      const fontSize = Math.round(canvas.width * 0.032);
+      ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+      const textWidth = ctx.measureText(label).width;
+      const bgWidth = Math.round(textWidth + padding * 2);
+      const bgHeight = Math.round(fontSize * 1.8);
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+      ctx.fillRect(0, 0, bgWidth, bgHeight);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.textBaseline = 'top';
+      ctx.fillText(label, padding, (bgHeight - fontSize) / 2);
+
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
+
 async function doCubemap() {
   if (!currentImagePath) return;
 
@@ -282,7 +359,19 @@ async function doCubemap() {
 
   try {
     const { yaw } = viewer.getYawPitch();
-    capturedImages = capture.captureSixFaces(viewer.getScene(), yaw);
+    rawCubemapImages = capture.captureSixFaces(viewer.getScene(), yaw);
+    let results = { ...rawCubemapImages };
+
+    if (labelVisible) {
+      imageInfo.textContent = 'Applying labels...';
+      for (const face of ['front', 'right', 'back', 'left', 'up', 'down']) {
+        if (results[face]) {
+          results[face] = await applyLabelToImage(results[face], FACE_LABELS[face]);
+        }
+      }
+    }
+
+    capturedImages = results;
     dialogMode = 'cubemap';
 
     imageInfo.textContent = 'Captured 6 faces';
@@ -309,6 +398,11 @@ function showExportDialog() {
   const dirs = Object.keys(capturedImages);
   const isCubemap = dialogMode === 'cubemap';
   document.getElementById('dialog-title').textContent = isCubemap ? 'Cubemap' : 'Capture';
+
+  // Show label toggle row only for cubemap mode
+  labelRow.style.display = isCubemap ? 'flex' : 'none';
+  btnLabelToggle.classList.toggle('active', labelVisible);
+  labelStatus.textContent = labelVisible ? 'On' : 'Off';
 
   for (const dir of dirs) {
     const item = document.createElement('div');
