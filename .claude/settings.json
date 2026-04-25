@@ -15,7 +15,15 @@
       "Bash(cargo expand *)",
       "Bash(cargo build *)",
       "Bash(npm run *)",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "Bash(xxd \"c:\\\\Users\\\\Hong\\\\Documents\\\\Works_temp\\\\360-camera\\\\main.js\")",
+      "Bash(node --check \"c:\\\\Users\\\\Hong\\\\Documents\\\\Works_temp\\\\360-camera\\\\main.js\")",
+      "Bash(curl -s http://localhost:5173)",
+      "Bash(curl -s http://localhost:5173/main.js)",
+      "Bash(curl -s http://localhost:5173/viewer.js)",
+      "Bash(curl -s http://localhost:5173/capture.js)",
+      "Read(//tmp/**)",
+      "Read(//c/tmp/**)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Hong\\Documents\\Works_temp\\360-camera\\docs\\superpowers"

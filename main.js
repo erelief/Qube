@@ -132,9 +132,9 @@ function _applyAspectRatio(ratioKey) {
 
 function _updateAspectSliderUI(key) {
   const index = Object.keys(ASPECT_RATIOS).indexOf(key);
-  const slider = document.querySelector('.ratio-slider');
+  const slider = document.querySelector('.focal-slider');
 
-  slider.querySelectorAll('.ratio-option').forEach((btn, i) => {
+  slider.querySelectorAll('.focal-option').forEach((btn, i) => {
     btn.classList.toggle('active', i === index);
   });
 
@@ -189,8 +189,8 @@ function _toggleMask() {
   btn.classList.toggle('active', maskVisible);
 }
 
-// Wire up ratio option buttons
-document.querySelectorAll('.ratio-option').forEach(btn => {
+// Wire up focal option buttons
+document.querySelectorAll('.focal-option').forEach(btn => {
   btn.addEventListener('click', () => {
     const ratio = btn.dataset.ratio;
     if (ratio && ratio !== currentAspect) {

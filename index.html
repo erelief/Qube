@@ -72,16 +72,23 @@
         </div>
         <div class="mask-area mask-bottom"></div>
       </div>
-    </div>
-
-    <!-- Aspect Ratio Slider (below viewer) -->
-    <div id="ratio-bar">
-      <div class="ratio-slider" data-index="0">
-        <button class="ratio-option active" data-ratio="1:1">1:1</button>
-        <button class="ratio-option" data-ratio="4:3">4:3</button>
-        <button class="ratio-option" data-ratio="3:2">3:2</button>
-        <div class="ratio-track"><div class="ratio-thumb"></div></div>
+      <!-- Focal-length style aspect ratio slider (inside viewer bottom) -->
+    <div id="focal-slider" class="focal-slider">
+      <div class="focal-options">
+        <button class="focal-option active" data-ratio="1:1" data-index="0">
+          <span class="focal-label">1:1</span>
+          <span class="focal-preview focal-preview-square"></span>
+        </button>
+        <button class="focal-option" data-ratio="4:3" data-index="1">
+          <span class="focal-label">4:3</span>
+          <span class="focal-preview focal-preview-43"></span>
+        </button>
+        <button class="focal-option" data-ratio="3:2" data-index="2">
+          <span class="focal-label">3:2</span>
+          <span class="focal-preview focal-preview-32"></span>
+        </button>
       </div>
+    </div>
     </div>
 
     <!-- Empty state overlay -->
