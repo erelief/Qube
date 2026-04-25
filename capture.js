@@ -27,7 +27,7 @@ export class ScreenshotCapture {
     const renderTarget = new THREE.WebGLRenderTarget(width, height);
     renderTarget.texture.colorSpace = THREE.SRGBColorSpace;
 
-    const euler = new THREE.Euler(pitch, yaw, 0, 'YXZ');
+    const euler = new THREE.Euler(pitch, yaw + Math.PI, 0, 'YXZ');
     camera.quaternion.setFromEuler(euler);
 
     renderer.setRenderTarget(renderTarget);
@@ -65,13 +65,14 @@ export class ScreenshotCapture {
     const renderTarget = new THREE.WebGLRenderTarget(size, size);
     renderTarget.texture.colorSpace = THREE.SRGBColorSpace;
 
+    const yaw0 = yaw + Math.PI;
     const directions = [
-      { name: 'front', yaw: yaw,           pitch: 0 },
-      { name: 'right', yaw: yaw - Math.PI / 2, pitch: 0 },
-      { name: 'back',  yaw: yaw + Math.PI,     pitch: 0 },
-      { name: 'left',  yaw: yaw + Math.PI / 2, pitch: 0 },
-      { name: 'up',    yaw: yaw,               pitch: Math.PI / 2 },
-      { name: 'down',  yaw: yaw,               pitch: -Math.PI / 2 },
+      { name: 'front', yaw: yaw0,               pitch: 0 },
+      { name: 'right', yaw: yaw0 - Math.PI / 2, pitch: 0 },
+      { name: 'back',  yaw: yaw0 + Math.PI,     pitch: 0 },
+      { name: 'left',  yaw: yaw0 + Math.PI / 2, pitch: 0 },
+      { name: 'up',    yaw: yaw0,               pitch: Math.PI / 2 },
+      { name: 'down',  yaw: yaw0,               pitch: -Math.PI / 2 },
     ];
 
     const results = {};
@@ -123,11 +124,12 @@ export class ScreenshotCapture {
     );
     renderTarget.texture.colorSpace = THREE.SRGBColorSpace;
 
+    const yaw0 = yaw + Math.PI;
     const directions = [
-      { name: 'front', yaw: yaw, pitch: pitch },
-      { name: 'right', yaw: yaw - Math.PI / 2, pitch: pitch },
-      { name: 'back', yaw: yaw + Math.PI, pitch: -pitch },
-      { name: 'left', yaw: yaw + Math.PI / 2, pitch: pitch },
+      { name: 'front', yaw: yaw0, pitch: pitch },
+      { name: 'right', yaw: yaw0 - Math.PI / 2, pitch: pitch },
+      { name: 'back', yaw: yaw0 + Math.PI, pitch: -pitch },
+      { name: 'left', yaw: yaw0 + Math.PI / 2, pitch: pitch },
     ];
 
     const results = {};
