@@ -17,7 +17,6 @@ const DEFAULT_ASPECT = '1:1';
 let viewer = null;
 let capture = null;
 let capturedImages = null;
-let captureResult = null;
 let dialogMode = null;
 let currentImagePath = null;
 let currentAspect = DEFAULT_ASPECT;
@@ -27,7 +26,6 @@ let maskVisible = true;
 const btnOpen = document.getElementById('btn-open');
 const btnCapture = document.getElementById('btn-capture');
 const btnCubemap = document.getElementById('btn-cubemap');
-const btnExport = document.getElementById('btn-export');
 const fovSlider = document.getElementById('fov-slider');
 const fovValue = document.getElementById('fov-value');
 const imageInfo = document.getElementById('image-info');
@@ -110,8 +108,6 @@ async function loadPanorama(path) {
     btnCapture.disabled = false;
     btnCubemap.disabled = false;
     capturedImages = null;
-    captureResult = null;
-    btnExport.disabled = true;
 
     imageInfo.textContent = `${info.width} x ${info.height}`;
   } catch (err) {
@@ -232,10 +228,8 @@ async function doCapture() {
 
     const dataUrl = capture.captureSingleView(viewer.getScene(), yaw, pitch, fov, width, height);
     capturedImages = { front: dataUrl };
-    captureResult = capturedImages;
     dialogMode = 'capture';
 
-    btnExport.disabled = false;
     imageInfo.textContent = 'Captured';
 
     showExportDialog();
@@ -263,7 +257,6 @@ async function doCubemap() {
     capturedImages = capture.captureSixFaces(viewer.getScene(), yaw);
     dialogMode = 'cubemap';
 
-    btnExport.disabled = false;
     imageInfo.textContent = 'Captured 6 faces';
 
     showExportDialog();
@@ -276,12 +269,6 @@ async function doCubemap() {
 }
 
 // --- Export Dialog ---
-btnExport.addEventListener('click', () => {
-  if (!captureResult) return;
-  capturedImages = captureResult;
-  dialogMode = 'capture';
-  showExportDialog();
-});
 
 function showExportDialog() {
   if (!capturedImages || !dialogMode) return;
@@ -363,7 +350,7 @@ function showExportDialog() {
 
         lightboxImg.src = capturedImages[dir];
         lightbox.querySelector('.lightbox-content').dataset.mode = dialogMode;
-        lightbox.classList.remove('hidden', 'unfocused');
+        lightbox.classList.remove('hidden');
       });
     });
   }
@@ -372,58 +359,24 @@ function showExportDialog() {
     ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Save 3x2 Merged`
     : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Save Image`;
 
-  exportDialog.classList.remove('hidden', 'unfocused');
+  exportDialog.classList.remove('hidden');
   exportDialog.querySelector('.dialog-content').focus();
 }
 
 function hideExportDialog() {
   exportDialog.classList.add('hidden');
-  exportDialog.classList.remove('unfocused');
 }
 
-// Close button (only way to truly close)
+// Close / backdrop click → always close (no shrink)
 exportDialog.querySelector('.dialog-close').addEventListener('click', () => hideExportDialog());
+exportDialog.querySelector('.dialog-backdrop').addEventListener('click', () => hideExportDialog());
 
-// Backdrop click → behavior depends on mode
-exportDialog.querySelector('.dialog-backdrop').addEventListener('click', () => {
-  if (dialogMode === 'cubemap') {
-    hideExportDialog();
-  } else {
-    exportDialog.classList.add('unfocused');
-  }
-});
-
-// Click shrunk dialog → restore with animation
-const dialogContent = exportDialog.querySelector('.dialog-content');
-dialogContent.addEventListener('click', (e) => {
-  if (exportDialog.classList.contains('unfocused')) {
-    exportDialog.classList.remove('unfocused');
-    exportDialog.classList.add('restoring');
-    e.stopPropagation();
-    setTimeout(() => exportDialog.classList.remove('restoring'), 400);
-  }
-});
-
-// Any interaction outside dialog → behavior depends on mode
+// Outside interaction → always close
 viewerContainer.addEventListener('mousedown', () => {
-  if (!exportDialog.classList.contains('hidden')) {
-    if (dialogMode === 'cubemap') {
-      hideExportDialog();
-    } else {
-      exportDialog.classList.add('unfocused');
-    }
-  }
+  if (!exportDialog.classList.contains('hidden')) hideExportDialog();
 });
-
-// Toolbar interactions also branch on mode
 document.getElementById('toolbar').addEventListener('mousedown', () => {
-  if (!exportDialog.classList.contains('hidden')) {
-    if (dialogMode === 'cubemap') {
-      hideExportDialog();
-    } else {
-      exportDialog.classList.add('unfocused');
-    }
-  }
+  if (!exportDialog.classList.contains('hidden')) hideExportDialog();
 });
 
 // Format / quality options
@@ -475,8 +428,6 @@ function sourceBaseName() {
 // Lightbox close → return to export dialog
 function closeLightbox() {
   lightbox.classList.add('hidden');
-  exportDialog.classList.remove('unfocused');
-  dialogContent.focus();
 }
 lightbox.querySelector('.dialog-close').addEventListener('click', closeLightbox);
 lightbox.querySelector('.dialog-backdrop').addEventListener('click', closeLightbox);
@@ -534,10 +485,7 @@ document.addEventListener('keydown', (e) => {
       if (!btnCapture.disabled) doCapture();
       break;
     case 'c':
-      if (!btnCubemap.disabled) showCubemapDialog();
-      break;
-    case 'e':
-      if (!btnExport.disabled) showExportDialog();
+      if (!btnCubemap.disabled) doCubemap();
       break;
     case 'm':
       _toggleMask();
@@ -601,8 +549,6 @@ document.addEventListener('paste', async (e) => {
         btnCapture.disabled = false;
         btnCubemap.disabled = false;
         capturedImages = null;
-        captureResult = null;
-        btnExport.disabled = true;
         imageInfo.textContent = `${file.name || 'Pasted'} (clipboard)`;
       } catch (err) {
         imageInfo.textContent = 'Paste error: ' + err;
