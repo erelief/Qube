@@ -1,7 +1,7 @@
 {
-  "productName": "360 Panorama Viewer",
+  "productName": "Q°ube",
   "version": "1.0.0",
-  "identifier": "com.panorama-viewer",
+  "identifier": "com.qube.app",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:5174",
@@ -11,7 +11,7 @@
   "app": {
     "windows": [
       {
-        "title": "360 Panorama Viewer",
+        "title": "Q°ube",
         "width": 1280,
         "height": 800,
         "minWidth": 900,
