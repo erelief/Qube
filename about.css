@@ -1,0 +1,124 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg-primary, #0d0d14);
+  color: var(--text-primary, #e8e8f0);
+  padding: 20px 24px;
+}
+
+.about-container {
+  min-width: 280px;
+}
+
+.about-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.about-app-icon {
+  height: 1.2em;
+  width: auto;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.about-app-icon[src=""],
+.about-app-icon:not([src]) {
+  display: none;
+}
+
+.about-app-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary, #e8e8f0);
+}
+
+.about-version {
+  font-size: 13px;
+  color: var(--text-secondary, #8888aa);
+  margin-left: auto;
+}
+
+.about-divider {
+  width: 100%;
+  height: 1px;
+  background: var(--border, #2a2a44);
+  margin: 12px 0;
+}
+
+.about-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.about-section + .about-section {
+  margin-top: 8px;
+}
+
+.about-label {
+  color: var(--text-secondary, #8888aa);
+}
+
+.about-value {
+  color: var(--text-primary, #e8e8f0);
+}
+
+.about-value-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent, #e94560);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.about-value-link:hover {
+  color: var(--accent-hover, #ff5a75);
+  text-decoration: underline;
+}
+
+.about-deps-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #8888aa);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.about-dep-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.about-dep-item + .about-dep-item {
+  margin-top: 6px;
+}
+
+.about-dep-name {
+  color: var(--text-secondary, #8888aa);
+}
+
+.about-dep-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent, #e94560);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.about-dep-link:hover {
+  color: var(--accent-hover, #ff5a75);
+  text-decoration: underline;
+}

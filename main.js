@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWebview } from '@tauri-apps/api/webview';
 import { open, save } from '@tauri-apps/plugin-dialog';
+import { open as shellOpen } from '@tauri-apps/plugin-shell';
 import { PanoramaViewer } from './viewer.js';
 import { ScreenshotCapture } from './capture.js';
 
@@ -45,10 +46,37 @@ const lightbox = document.getElementById('lightbox');
 const lightboxImg = document.getElementById('lightbox-img');
 
 const dropZone = document.getElementById('drop-zone');
+const btnAbout = document.getElementById('btn-about');
 
 // Initialize viewer and capture
 viewer = new PanoramaViewer(viewerContainer);
 capture = new ScreenshotCapture();
+
+// --- About Dialog ---
+const aboutDialog = document.getElementById('about-dialog');
+
+function showAboutDialog() {
+  document.getElementById('about-version-number').textContent = __APP_VERSION__;
+  const iconEl = document.getElementById('about-app-icon');
+  if (__APP_ICON__) iconEl.src = __APP_ICON__;
+  aboutDialog.classList.remove('hidden');
+}
+
+function hideAboutDialog() {
+  aboutDialog.classList.add('hidden');
+}
+
+btnAbout.addEventListener('click', showAboutDialog);
+aboutDialog.querySelector('.dialog-close').addEventListener('click', hideAboutDialog);
+aboutDialog.querySelector('.dialog-backdrop').addEventListener('click', hideAboutDialog);
+
+// Open external links via Tauri shell
+aboutDialog.querySelectorAll('a[href]').forEach(a => {
+  a.addEventListener('click', (e) => {
+    e.preventDefault();
+    shellOpen(a.href);
+  });
+});
 
 // --- FOV Control ---
 const FOV_MIN = parseInt(fovSlider.min);
@@ -500,7 +528,9 @@ document.addEventListener('keydown', (e) => {
       _applyAspectRatio('3:2');
       break;
     case 'escape':
-      if (!lightbox.classList.contains('hidden')) {
+      if (!aboutDialog.classList.contains('hidden')) {
+        hideAboutDialog();
+      } else if (!lightbox.classList.contains('hidden')) {
         lightbox.classList.add('hidden');
       } else if (!exportDialog.classList.contains('hidden')) {
         hideExportDialog();
