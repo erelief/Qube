@@ -24,19 +24,18 @@ function createLabelTexture(letter, color) {
 }
 
 function createAxisLine(dir, color) {
-  const points = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(...dir).multiplyScalar(0.85)];
+  const points = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(...dir).multiplyScalar(0.92)];
   const geo = new THREE.BufferGeometry().setFromPoints(points);
   const mat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
   return new THREE.Line(geo, mat);
 }
 
 function createArrow(dir, color) {
-  const geo = new THREE.ConeGeometry(0.08, 0.25, 12);
+  const geo = new THREE.ConeGeometry(0.09, 0.22, 12);
   const mat = new THREE.MeshBasicMaterial({ color });
   const cone = new THREE.Mesh(geo, mat);
-  const tip = new THREE.Vector3(...dir).multiplyScalar(0.85);
+  const tip = new THREE.Vector3(...dir).multiplyScalar(0.92);
   cone.position.copy(tip);
-  // Orient cone to point along the axis direction
   const axis = new THREE.Vector3(0, 1, 0);
   const target = new THREE.Vector3(...dir);
   cone.quaternion.setFromUnitVectors(axis, target);
@@ -47,7 +46,7 @@ function createLabel(dir, color, letter) {
   const tex = createLabelTexture(letter, color);
   const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
   const sprite = new THREE.Sprite(mat);
-  sprite.position.set(dir[0] * 1.15, dir[1] * 1.15, dir[2] * 1.15);
+  sprite.position.set(dir[0] * 1.08, dir[1] * 1.08, dir[2] * 1.08);
   sprite.scale.set(0.35, 0.35, 1);
   return sprite;
 }
@@ -82,16 +81,6 @@ export class AxisGizmo {
 
     // --- Scene ---
     this.gizmoScene = new THREE.Scene();
-
-    // Wireframe sphere
-    const sphereGeo = new THREE.SphereGeometry(1, 24, 16);
-    const wireGeo = new THREE.WireframeGeometry(sphereGeo);
-    const wireMat = new THREE.LineBasicMaterial({
-      color: 0xffffff,
-      opacity: 0.12,
-      transparent: true,
-    });
-    this.gizmoScene.add(new THREE.LineSegments(wireGeo, wireMat));
 
     // Axes group — gets the conjugated camera quaternion applied each frame
     this.axesGroup = new THREE.Group();
