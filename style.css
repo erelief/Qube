@@ -153,7 +153,7 @@ input[type="range"]::-webkit-slider-thumb {
 /* ===== Axis Orientation Gizmo ===== */
 .axis-gizmo-wrapper {
   position: absolute;
-  bottom: 12px;
+  bottom: 40px;
   right: 12px;
   z-index: 15;
   pointer-events: none;
@@ -177,7 +177,7 @@ input[type="range"]::-webkit-slider-thumb {
 .axis-gizmo-angle {
   position: absolute;
   bottom: 12px;
-  right: 122px;
+  right: 12px;
   z-index: 16;
   font-size: 11px;
   font-family: "SF Mono", "Cascadia Code", "Consolas", monospace;
