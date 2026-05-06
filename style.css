@@ -150,6 +150,46 @@ input[type="range"]::-webkit-slider-thumb {
   display: block;
 }
 
+/* ===== Axis Orientation Gizmo ===== */
+.axis-gizmo-wrapper {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  z-index: 15;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  pointer-events: none;
+  opacity: 0.85;
+  transition: opacity 0.3s ease;
+}
+
+.axis-gizmo-wrapper:hover {
+  opacity: 1;
+}
+
+.axis-gizmo-wrapper canvas {
+  display: block;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: rgba(13, 13, 20, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.axis-gizmo-angle {
+  font-size: 11px;
+  font-family: "SF Mono", "Cascadia Code", "Consolas", monospace;
+  font-variant-numeric: tabular-nums;
+  color: rgba(232, 232, 240, 0.8);
+  background: rgba(13, 13, 20, 0.6);
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  white-space: pre;
+  line-height: 1.5;
+}
+
 /* ===== Canvas Wrapper (unused reserve, kept for DOM stability) ===== */
 
 /* ===== Focal-length Style Aspect Ratio Slider (inside viewer bottom) ===== */

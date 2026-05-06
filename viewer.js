@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { AxisGizmo } from './axis-gizmo.js';
 
 export class PanoramaViewer {
   constructor(container) {
@@ -38,6 +39,9 @@ export class PanoramaViewer {
     this._onResize = () => this._handleResize();
     window.addEventListener('resize', this._onResize);
 
+    this.axisGizmo = new AxisGizmo(this.container, this.camera);
+    this.container.appendChild(this.axisGizmo.element);
+
     this._animate();
   }
 
@@ -53,6 +57,7 @@ export class PanoramaViewer {
     this._rafId = requestAnimationFrame(() => this._animate());
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
+    if (this.axisGizmo) this.axisGizmo.update();
   }
 
   async loadTexture(dataUrl) {
@@ -69,6 +74,7 @@ export class PanoramaViewer {
           this.texture = texture;
           this.sphere.material.dispose();
           this.sphere.material = new THREE.MeshBasicMaterial({ map: texture });
+          this.axisGizmo.setEnabled(true);
           resolve();
         },
         undefined,
@@ -115,6 +121,10 @@ export class PanoramaViewer {
 
   dispose() {
     cancelAnimationFrame(this._rafId);
+    if (this.axisGizmo) {
+      this.axisGizmo.dispose();
+      this.axisGizmo = null;
+    }
     window.removeEventListener('resize', this._onResize);
     if (this.texture) this.texture.dispose();
     this.sphere.geometry.dispose();
