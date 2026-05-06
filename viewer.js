@@ -103,9 +103,9 @@ export class PanoramaViewer {
     const pitch = THREE.MathUtils.degToRad(pitchDeg);
     const distance = this.camera.position.distanceTo(this.controls.target);
     const offset = new THREE.Vector3(
-      distance * Math.sin(yaw) * Math.cos(pitch),
-      distance * Math.sin(pitch),
-      distance * Math.cos(yaw) * Math.cos(pitch)
+      -distance * Math.sin(yaw) * Math.cos(pitch),
+      -distance * Math.sin(pitch),
+      -distance * Math.cos(yaw) * Math.cos(pitch)
     );
     this.camera.position.copy(this.controls.target).add(offset);
     this.camera.lookAt(this.controls.target);

@@ -105,11 +105,13 @@ export class AxisGizmo {
 
     this._enabled = false;
     this._editing = false;
+    this._outsideHandler = null;
     this._onAngleChange = null;
     this.element.style.display = 'none';
 
-    this.angleText.addEventListener('dblclick', (e) => {
+    this.angleText.addEventListener('click', (e) => {
       e.stopPropagation();
+      if (this._editing) return;
       const dir = new THREE.Vector3();
       this.mainCamera.getWorldDirection(dir);
       const yaw = THREE.MathUtils.radToDeg(Math.atan2(dir.x, dir.z));
@@ -157,6 +159,7 @@ export class AxisGizmo {
     const submit = () => {
       if (!this._editing) return;
       this._editing = false;
+      this._cleanupOutsideHandler();
       const newYaw = parseFloat(yawInput.value);
       const newPitch = parseFloat(pitchInput.value);
       if (!isNaN(newYaw) && !isNaN(newPitch) && this._onAngleChange) {
@@ -164,20 +167,30 @@ export class AxisGizmo {
       }
     };
 
-    yawInput.addEventListener('keydown', (e) => {
-      e.stopPropagation();
-      if (e.key === 'Enter') { pitchInput.focus(); pitchInput.select(); }
-      if (e.key === 'Escape') { this._editing = false; this._updateAngleText(); }
-    });
-    pitchInput.addEventListener('keydown', (e) => {
+    // Click outside the inputs → submit
+    this._outsideHandler = (e) => {
+      if (!yawInput.contains(e.target) && !pitchInput.contains(e.target)) {
+        submit();
+      }
+    };
+    setTimeout(() => document.addEventListener('mousedown', this._outsideHandler), 0);
+
+    const onKeydown = (e) => {
       e.stopPropagation();
       if (e.key === 'Enter') submit();
-      if (e.key === 'Escape') { this._editing = false; this._updateAngleText(); }
-    });
-    yawInput.addEventListener('blur', submit);
-    pitchInput.addEventListener('blur', submit);
-    yawInput.addEventListener('dblclick', (e) => e.stopPropagation());
-    pitchInput.addEventListener('dblclick', (e) => e.stopPropagation());
+      if (e.key === 'Escape') { this._editing = false; this._cleanupOutsideHandler(); this._updateAngleText(); }
+    };
+    yawInput.addEventListener('keydown', onKeydown);
+    pitchInput.addEventListener('keydown', onKeydown);
+    yawInput.addEventListener('click', (e) => e.stopPropagation());
+    pitchInput.addEventListener('click', (e) => e.stopPropagation());
+  }
+
+  _cleanupOutsideHandler() {
+    if (this._outsideHandler) {
+      document.removeEventListener('mousedown', this._outsideHandler);
+      this._outsideHandler = null;
+    }
   }
 
   _updateAngleText() {
@@ -207,6 +220,7 @@ export class AxisGizmo {
   }
 
   dispose() {
+    this._cleanupOutsideHandler();
     this.gizmoScene.traverse((obj) => {
       if (obj.geometry) obj.geometry.dispose();
       if (obj.material) {
