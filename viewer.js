@@ -40,6 +40,7 @@ export class PanoramaViewer {
     window.addEventListener('resize', this._onResize);
 
     this.axisGizmo = new AxisGizmo(this.container, this.camera);
+    this.axisGizmo.setOnAngleChange((yawDeg, pitchDeg) => this.setCameraAngles(yawDeg, pitchDeg));
     this.container.appendChild(this.axisGizmo.element);
 
     this._animate();
@@ -95,6 +96,20 @@ export class PanoramaViewer {
       yaw: Math.atan2(dir.x, dir.z),
       pitch: Math.asin(Math.max(-1, Math.min(1, dir.y))),
     };
+  }
+
+  setCameraAngles(yawDeg, pitchDeg) {
+    const yaw = THREE.MathUtils.degToRad(yawDeg);
+    const pitch = THREE.MathUtils.degToRad(pitchDeg);
+    const distance = this.camera.position.distanceTo(this.controls.target);
+    const offset = new THREE.Vector3(
+      distance * Math.sin(yaw) * Math.cos(pitch),
+      distance * Math.sin(pitch),
+      distance * Math.cos(yaw) * Math.cos(pitch)
+    );
+    this.camera.position.copy(this.controls.target).add(offset);
+    this.camera.lookAt(this.controls.target);
+    this.controls.update();
   }
 
   resetPitch() {

@@ -104,7 +104,22 @@ export class AxisGizmo {
     }
 
     this._enabled = false;
+    this._editing = false;
+    this._onAngleChange = null;
     this.element.style.display = 'none';
+
+    this.angleText.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      const dir = new THREE.Vector3();
+      this.mainCamera.getWorldDirection(dir);
+      const yaw = THREE.MathUtils.radToDeg(Math.atan2(dir.x, dir.z));
+      const pitch = THREE.MathUtils.radToDeg(Math.asin(Math.max(-1, Math.min(1, dir.y))));
+      this._enterEditMode(yaw, pitch);
+    });
+  }
+
+  setOnAngleChange(fn) {
+    this._onAngleChange = fn;
   }
 
   setEnabled(enabled) {
@@ -113,18 +128,80 @@ export class AxisGizmo {
     this.element.style.display = enabled ? '' : 'none';
   }
 
+  _enterEditMode(yawDeg, pitchDeg) {
+    if (this._editing) return;
+    this._editing = true;
+
+    const yawInput = document.createElement('input');
+    yawInput.type = 'number';
+    yawInput.className = 'axis-gizmo-angle-input';
+    yawInput.value = yawDeg.toFixed(1);
+    yawInput.step = '0.1';
+
+    const pitchInput = document.createElement('input');
+    pitchInput.type = 'number';
+    pitchInput.className = 'axis-gizmo-angle-input';
+    pitchInput.value = pitchDeg.toFixed(1);
+    pitchInput.step = '0.1';
+    pitchInput.min = '-90';
+    pitchInput.max = '90';
+
+    this.angleText.innerHTML = '';
+    this.angleText.append('Y ', yawInput, '°  P ', pitchInput, '°');
+
+    requestAnimationFrame(() => {
+      yawInput.focus();
+      yawInput.select();
+    });
+
+    const submit = () => {
+      if (!this._editing) return;
+      this._editing = false;
+      const newYaw = parseFloat(yawInput.value);
+      const newPitch = parseFloat(pitchInput.value);
+      if (!isNaN(newYaw) && !isNaN(newPitch) && this._onAngleChange) {
+        this._onAngleChange(newYaw, Math.max(-90, Math.min(90, newPitch)));
+      }
+    };
+
+    yawInput.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') { pitchInput.focus(); pitchInput.select(); }
+      if (e.key === 'Escape') { this._editing = false; this._updateAngleText(); }
+    });
+    pitchInput.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') submit();
+      if (e.key === 'Escape') { this._editing = false; this._updateAngleText(); }
+    });
+    yawInput.addEventListener('blur', submit);
+    pitchInput.addEventListener('blur', submit);
+    yawInput.addEventListener('dblclick', (e) => e.stopPropagation());
+    pitchInput.addEventListener('dblclick', (e) => e.stopPropagation());
+  }
+
+  _updateAngleText() {
+    const dir = new THREE.Vector3();
+    this.mainCamera.getWorldDirection(dir);
+    const yaw = THREE.MathUtils.radToDeg(Math.atan2(dir.x, dir.z));
+    const pitch = THREE.MathUtils.radToDeg(Math.asin(Math.max(-1, Math.min(1, dir.y))));
+    this.angleText.innerHTML = `<span class="axis-gizmo-yaw">Y ${yaw.toFixed(1)}°</span>  <span class="axis-gizmo-pitch">P ${pitch.toFixed(1)}°</span>`;
+  }
+
   update() {
     if (!this._enabled) return;
 
     // Mirror camera orientation: conjugate = inverse quaternion
     this.axesGroup.quaternion.copy(this.mainCamera.quaternion).conjugate();
 
-    // Angle readout
-    const dir = new THREE.Vector3();
-    this.mainCamera.getWorldDirection(dir);
-    const yaw = THREE.MathUtils.radToDeg(Math.atan2(dir.x, dir.z));
-    const pitch = THREE.MathUtils.radToDeg(Math.asin(Math.max(-1, Math.min(1, dir.y))));
-    this.angleText.textContent = `Y ${yaw.toFixed(1)}°  P ${pitch.toFixed(1)}°`;
+    // Angle readout (skip while editing)
+    if (!this._editing) {
+      const dir = new THREE.Vector3();
+      this.mainCamera.getWorldDirection(dir);
+      const yaw = THREE.MathUtils.radToDeg(Math.atan2(dir.x, dir.z));
+      const pitch = THREE.MathUtils.radToDeg(Math.asin(Math.max(-1, Math.min(1, dir.y))));
+      this.angleText.innerHTML = `<span class="axis-gizmo-yaw">Y ${yaw.toFixed(1)}°</span>  <span class="axis-gizmo-pitch">P ${pitch.toFixed(1)}°</span>`;
+    }
 
     this.renderer.render(this.gizmoScene, this.gizmoCamera);
   }

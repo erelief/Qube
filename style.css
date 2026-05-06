@@ -188,6 +188,23 @@ input[type="range"]::-webkit-slider-thumb {
   border: 1px solid rgba(255, 255, 255, 0.1);
   white-space: pre;
   line-height: 1.5;
+  cursor: text;
+  pointer-events: auto;
+  user-select: none;
+}
+
+.axis-gizmo-angle-input {
+  width: 54px;
+  font-size: 11px;
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+  color: rgba(232, 232, 240, 1);
+  background: rgba(40, 40, 55, 0.9);
+  border: 1px solid rgba(233, 69, 96, 0.5);
+  border-radius: 3px;
+  padding: 0 2px;
+  outline: none;
+  text-align: right;
 }
 
 /* ===== Canvas Wrapper (unused reserve, kept for DOM stability) ===== */
