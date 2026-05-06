@@ -2,26 +2,10 @@ import * as THREE from 'three';
 
 const SIZE = 100;
 const AXIS_CONFIGS = [
-  { dir: [1, 0, 0], color: 0xff4444, label: 'X' },
-  { dir: [0, 1, 0], color: 0x44ff44, label: 'Y' },
-  { dir: [0, 0, 1], color: 0x4488ff, label: 'Z' },
+  { dir: [1, 0, 0], color: 0xff4444 },
+  { dir: [0, 1, 0], color: 0x44ff44 },
+  { dir: [0, 0, 1], color: 0x4488ff },
 ];
-
-function createLabelTexture(letter, color) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 64;
-  canvas.height = 64;
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, 64, 64);
-  ctx.fillStyle = '#' + new THREE.Color(color).getHexString();
-  ctx.font = 'bold 32px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(letter, 32, 32);
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.needsUpdate = true;
-  return tex;
-}
 
 function createAxisLine(dir, color) {
   const points = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(...dir).multiplyScalar(0.92)];
@@ -40,15 +24,6 @@ function createArrow(dir, color) {
   const target = new THREE.Vector3(...dir);
   cone.quaternion.setFromUnitVectors(axis, target);
   return cone;
-}
-
-function createLabel(dir, color, letter) {
-  const tex = createLabelTexture(letter, color);
-  const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
-  const sprite = new THREE.Sprite(mat);
-  sprite.position.set(dir[0] * 1.08, dir[1] * 1.08, dir[2] * 1.08);
-  sprite.scale.set(0.35, 0.35, 1);
-  return sprite;
 }
 
 export class AxisGizmo {
@@ -86,10 +61,9 @@ export class AxisGizmo {
     this.axesGroup = new THREE.Group();
     this.gizmoScene.add(this.axesGroup);
 
-    for (const { dir, color, label } of AXIS_CONFIGS) {
+    for (const { dir, color } of AXIS_CONFIGS) {
       this.axesGroup.add(createAxisLine(dir, color));
       this.axesGroup.add(createArrow(dir, color));
-      this.axesGroup.add(createLabel(dir, color, label));
     }
 
     this._enabled = false;
