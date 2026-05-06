@@ -14,3 +14,9 @@ cargo = cargo.replace(
 
 fs.writeFileSync(cargoPath, cargo);
 console.log(`Synced version to ${pkg.version} in Cargo.toml`);
+
+const tauriPath = path.join(__dirname, '..', 'src-tauri', 'tauri.conf.json');
+const tauri = JSON.parse(fs.readFileSync(tauriPath, 'utf8'));
+tauri.version = pkg.version;
+fs.writeFileSync(tauriPath, JSON.stringify(tauri, null, 2) + '\n');
+console.log(`Synced version to ${pkg.version} in tauri.conf.json`);
