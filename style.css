@@ -156,9 +156,6 @@ input[type="range"]::-webkit-slider-thumb {
   bottom: 12px;
   right: 12px;
   z-index: 15;
-  display: flex;
-  align-items: flex-end;
-  gap: 6px;
   pointer-events: none;
   opacity: 0.85;
   transition: opacity 0.3s ease;
@@ -178,6 +175,10 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .axis-gizmo-angle {
+  position: absolute;
+  bottom: 12px;
+  right: 122px;
+  z-index: 16;
   font-size: 11px;
   font-family: "SF Mono", "Cascadia Code", "Consolas", monospace;
   font-variant-numeric: tabular-nums;
@@ -189,7 +190,6 @@ input[type="range"]::-webkit-slider-thumb {
   white-space: pre;
   line-height: 1.5;
   cursor: text;
-  pointer-events: auto;
   user-select: none;
 }
 
@@ -205,6 +205,13 @@ input[type="range"]::-webkit-slider-thumb {
   padding: 0 2px;
   outline: none;
   text-align: right;
+  -moz-appearance: textfield;
+}
+
+.axis-gizmo-angle-input::-webkit-inner-spin-button,
+.axis-gizmo-angle-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 /* ===== Canvas Wrapper (unused reserve, kept for DOM stability) ===== */

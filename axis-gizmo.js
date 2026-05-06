@@ -57,14 +57,14 @@ export class AxisGizmo {
     this.container = container;
     this.mainCamera = mainCamera;
 
-    // --- DOM wrapper ---
-    this.element = document.createElement('div');
-    this.element.className = 'axis-gizmo-wrapper';
-
+    // --- DOM: angle text (independent, interactive) ---
     this.angleText = document.createElement('div');
     this.angleText.className = 'axis-gizmo-angle';
     this.angleText.textContent = 'Y 0.0°  P 0.0°';
-    this.element.appendChild(this.angleText);
+
+    // --- DOM: sphere canvas (inside non-interactive wrapper) ---
+    this.element = document.createElement('div');
+    this.element.className = 'axis-gizmo-wrapper';
 
     const canvas = document.createElement('canvas');
     this.element.appendChild(canvas);
@@ -106,11 +106,16 @@ export class AxisGizmo {
     this._enabled = false;
     this._editing = false;
     this._outsideHandler = null;
+    this._submitTimer = null;
     this._onAngleChange = null;
     this.element.style.display = 'none';
+    this.angleText.style.display = 'none';
 
-    this.angleText.addEventListener('click', (e) => {
+    // mousedown fires before the document-level outside handler,
+    // so we can cancel any pending submit before entering edit mode
+    this.angleText.addEventListener('mousedown', (e) => {
       e.stopPropagation();
+      this._cancelPendingSubmit();
       if (this._editing) return;
       const dir = new THREE.Vector3();
       this.mainCamera.getWorldDirection(dir);
@@ -127,7 +132,16 @@ export class AxisGizmo {
   setEnabled(enabled) {
     if (this._enabled === enabled) return;
     this._enabled = enabled;
-    this.element.style.display = enabled ? '' : 'none';
+    const display = enabled ? '' : 'none';
+    this.element.style.display = display;
+    this.angleText.style.display = display;
+  }
+
+  _cancelPendingSubmit() {
+    if (this._submitTimer !== null) {
+      clearTimeout(this._submitTimer);
+      this._submitTimer = null;
+    }
   }
 
   _enterEditMode(yawDeg, pitchDeg) {
@@ -167,13 +181,21 @@ export class AxisGizmo {
       }
     };
 
-    // Click outside the inputs → submit
+    // Click outside the inputs → submit (deferred to avoid catching the initiating click)
     this._outsideHandler = (e) => {
       if (!yawInput.contains(e.target) && !pitchInput.contains(e.target)) {
         submit();
       }
     };
-    setTimeout(() => document.addEventListener('mousedown', this._outsideHandler), 0);
+    this._submitTimer = setTimeout(() => {
+      this._submitTimer = null;
+      document.addEventListener('mousedown', this._outsideHandler);
+    }, 0);
+
+    // mousedown on inputs: stop propagation so outside handler doesn't fire
+    const onInputMousedown = (e) => e.stopPropagation();
+    yawInput.addEventListener('mousedown', onInputMousedown);
+    pitchInput.addEventListener('mousedown', onInputMousedown);
 
     const onKeydown = (e) => {
       e.stopPropagation();
@@ -182,11 +204,10 @@ export class AxisGizmo {
     };
     yawInput.addEventListener('keydown', onKeydown);
     pitchInput.addEventListener('keydown', onKeydown);
-    yawInput.addEventListener('click', (e) => e.stopPropagation());
-    pitchInput.addEventListener('click', (e) => e.stopPropagation());
   }
 
   _cleanupOutsideHandler() {
+    this._cancelPendingSubmit();
     if (this._outsideHandler) {
       document.removeEventListener('mousedown', this._outsideHandler);
       this._outsideHandler = null;
@@ -231,6 +252,9 @@ export class AxisGizmo {
     this.renderer.dispose();
     if (this.element.parentNode) {
       this.element.parentNode.removeChild(this.element);
+    }
+    if (this.angleText.parentNode) {
+      this.angleText.parentNode.removeChild(this.angleText);
     }
   }
 }

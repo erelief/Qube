@@ -42,6 +42,7 @@ export class PanoramaViewer {
     this.axisGizmo = new AxisGizmo(this.container, this.camera);
     this.axisGizmo.setOnAngleChange((yawDeg, pitchDeg) => this.setCameraAngles(yawDeg, pitchDeg));
     this.container.appendChild(this.axisGizmo.element);
+    this.container.appendChild(this.axisGizmo.angleText);
 
     this._animate();
   }
