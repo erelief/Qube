@@ -8,6 +8,7 @@
     "dialog:allow-save",
     "fs:default",
     "shell:allow-open",
+    "updater:default",
     {
       "identifier": "fs:allow-read-file",
       "allow": [{ "path": "$**" }]

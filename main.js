@@ -98,6 +98,145 @@ aboutDialog.querySelectorAll('a[href]').forEach(a => {
   });
 });
 
+// --- Auto Updater ---
+(async function initUpdater() {
+  const btnCheck = document.getElementById('btn-check-update');
+  const statusEl = document.getElementById('update-status');
+  const autoToggle = document.getElementById('auto-update-toggle');
+  if (!btnCheck || !statusEl || !autoToggle) return;
+
+  const isTauri = typeof window.__TAURI_INTERNALS__ !== 'undefined';
+  if (!isTauri) return;
+
+  btnCheck.disabled = false;
+
+  const AUTO_UPDATE_KEY = 'qube-auto-update';
+  const saved = localStorage.getItem(AUTO_UPDATE_KEY);
+  if (saved !== null) autoToggle.checked = saved === 'true';
+  autoToggle.addEventListener('change', () => {
+    localStorage.setItem(AUTO_UPDATE_KEY, String(autoToggle.checked));
+  });
+
+  const { check } = await import('@tauri-apps/plugin-updater');
+  const { relaunch } = await import('@tauri-apps/plugin-process');
+
+  function setStatus(text, className) {
+    statusEl.className = 'about-update-status' + (className ? ' ' + className : '');
+    statusEl.innerHTML = '';
+    if (typeof text === 'string') statusEl.textContent = text;
+  }
+
+  function clearStatus() {
+    statusEl.className = 'about-update-status';
+    statusEl.innerHTML = '';
+  }
+
+  function formatBytes(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  async function checkForUpdate({ silent = false } = {}) {
+    setStatus('Checking for updates...', 'checking');
+    try {
+      const update = await check();
+      if (!update) {
+        if (!silent) setStatus('Up to date', 'up-to-date');
+        else clearStatus();
+        return;
+      }
+
+      setStatus('', 'update-available');
+      const textSpan = document.createElement('span');
+      textSpan.textContent = 'New version v' + update.version;
+      statusEl.appendChild(textSpan);
+
+      const installBtn = document.createElement('button');
+      installBtn.className = 'about-btn-install-update';
+      installBtn.textContent = 'Install';
+      statusEl.appendChild(installBtn);
+
+      if (silent) {
+        const toast = document.getElementById('update-toast');
+        const toastText = document.getElementById('update-toast-text');
+        const toastBtn = document.getElementById('update-toast-btn');
+        const toastClose = document.getElementById('update-toast-close');
+        if (toast && toastText && toastBtn && toastClose) {
+          toastText.textContent = 'New version v' + update.version + ' available';
+          toast.classList.add('visible');
+          toastBtn.addEventListener('click', () => {
+            toast.classList.remove('visible');
+            showAboutDialog();
+          });
+          toastClose.addEventListener('click', () => toast.classList.remove('visible'));
+          setTimeout(() => toast.classList.remove('visible'), 10000);
+        }
+      }
+
+      installBtn.addEventListener('click', async () => {
+        installBtn.disabled = true;
+        installBtn.textContent = 'Downloading...';
+
+        const progressDiv = document.createElement('div');
+        progressDiv.className = 'about-update-progress';
+        const progressBar = document.createElement('div');
+        progressBar.className = 'about-update-progress-bar';
+        const progressFill = document.createElement('div');
+        progressFill.className = 'about-update-progress-bar-fill';
+        progressBar.appendChild(progressFill);
+        const progressText = document.createElement('div');
+        progressText.className = 'about-update-progress-text';
+        progressText.textContent = 'Preparing...';
+        progressDiv.appendChild(progressBar);
+        progressDiv.appendChild(progressText);
+        statusEl.appendChild(progressDiv);
+
+        let downloaded = 0;
+        let contentLength = 0;
+
+        try {
+          await update.downloadAndInstall((event) => {
+            switch (event.event) {
+              case 'Started':
+                contentLength = event.data.contentLength || 0;
+                break;
+              case 'Progress':
+                downloaded += event.data.chunkLength;
+                if (contentLength > 0) {
+                  const pct = Math.round((downloaded / contentLength) * 100);
+                  progressFill.style.width = pct + '%';
+                  progressText.textContent = 'Downloading ' + pct + '% (' + formatBytes(downloaded) + ' / ' + formatBytes(contentLength) + ')';
+                } else {
+                  progressText.textContent = 'Downloading... ' + formatBytes(downloaded);
+                }
+                break;
+              case 'Finished':
+                progressFill.style.width = '100%';
+                progressText.textContent = 'Download complete, installing...';
+                break;
+            }
+          });
+
+          progressText.textContent = 'Install complete, restarting...';
+          await relaunch();
+        } catch (e) {
+          setStatus('Update failed: ' + e.message, 'error');
+        }
+      });
+    } catch (e) {
+      if (!silent) setStatus('Check failed: ' + e.message, 'error');
+      else clearStatus();
+    }
+  }
+
+  btnCheck.addEventListener('click', () => checkForUpdate({ silent: false }));
+
+  if (autoToggle.checked) {
+    checkForUpdate({ silent: true });
+  }
+})();
+
 // --- FOV Control ---
 const FOV_MIN = parseInt(fovSlider.min);
 const FOV_MAX = parseInt(fovSlider.max);
