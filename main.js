@@ -101,14 +101,15 @@ aboutDialog.querySelectorAll('a[href]').forEach(a => {
 // --- Auto Updater ---
 (async function initUpdater() {
   const btnCheck = document.getElementById('btn-check-update');
-  const statusEl = document.getElementById('update-status');
   const autoToggle = document.getElementById('auto-update-toggle');
-  if (!btnCheck || !statusEl || !autoToggle) return;
+  if (!btnCheck || !autoToggle) return;
 
   const isTauri = typeof window.__TAURI_INTERNALS__ !== 'undefined';
   if (!isTauri) return;
 
   btnCheck.disabled = false;
+
+  const origHTML = btnCheck.innerHTML;
 
   const AUTO_UPDATE_KEY = 'qube-auto-update';
   const saved = localStorage.getItem(AUTO_UPDATE_KEY);
@@ -120,42 +121,35 @@ aboutDialog.querySelectorAll('a[href]').forEach(a => {
   const { check } = await import('@tauri-apps/plugin-updater');
   const { relaunch } = await import('@tauri-apps/plugin-process');
 
-  function setStatus(text, className) {
-    statusEl.className = 'about-update-status' + (className ? ' ' + className : '');
-    statusEl.innerHTML = '';
-    if (typeof text === 'string') statusEl.textContent = text;
-  }
-
-  function clearStatus() {
-    statusEl.className = 'about-update-status';
-    statusEl.innerHTML = '';
-  }
-
-  function formatBytes(bytes) {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  function resetBtn() {
+    btnCheck.className = 'about-btn-check-update';
+    btnCheck.disabled = false;
+    btnCheck.innerHTML = origHTML;
   }
 
   async function checkForUpdate({ silent = false } = {}) {
-    setStatus('Checking for updates...', 'checking');
+    btnCheck.classList.add('about-btn-checking');
+    btnCheck.disabled = true;
+    btnCheck.textContent = 'Checking...';
+
     try {
       const update = await check();
       if (!update) {
-        if (!silent) setStatus('Up to date', 'up-to-date');
-        else clearStatus();
+        if (!silent) {
+          btnCheck.classList.remove('about-btn-checking');
+          btnCheck.classList.add('about-btn-up-to-date');
+          btnCheck.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg> Up to date';
+          setTimeout(resetBtn, 2000);
+        } else {
+          resetBtn();
+        }
         return;
       }
 
-      setStatus('', 'update-available');
-      const textSpan = document.createElement('span');
-      textSpan.textContent = 'New version v' + update.version;
-      statusEl.appendChild(textSpan);
-
-      const installBtn = document.createElement('button');
-      installBtn.className = 'about-btn-install-update';
-      installBtn.textContent = 'Install';
-      statusEl.appendChild(installBtn);
+      btnCheck.classList.remove('about-btn-checking');
+      btnCheck.classList.add('about-btn-has-update');
+      btnCheck.disabled = false;
+      btnCheck.innerHTML = '<span class="about-update-ver-text">v' + update.version + '</span><span class="about-update-action-text">Install</span>';
 
       if (silent) {
         const toast = document.getElementById('update-toast');
@@ -174,23 +168,11 @@ aboutDialog.querySelectorAll('a[href]').forEach(a => {
         }
       }
 
-      installBtn.addEventListener('click', async () => {
-        installBtn.disabled = true;
-        installBtn.textContent = 'Downloading...';
-
-        const progressDiv = document.createElement('div');
-        progressDiv.className = 'about-update-progress';
-        const progressBar = document.createElement('div');
-        progressBar.className = 'about-update-progress-bar';
-        const progressFill = document.createElement('div');
-        progressFill.className = 'about-update-progress-bar-fill';
-        progressBar.appendChild(progressFill);
-        const progressText = document.createElement('div');
-        progressText.className = 'about-update-progress-text';
-        progressText.textContent = 'Preparing...';
-        progressDiv.appendChild(progressBar);
-        progressDiv.appendChild(progressText);
-        statusEl.appendChild(progressDiv);
+      btnCheck.addEventListener('click', async function onInstall() {
+        btnCheck.classList.remove('about-btn-has-update');
+        btnCheck.classList.add('about-btn-downloading');
+        btnCheck.disabled = true;
+        btnCheck.textContent = 'Preparing...';
 
         let downloaded = 0;
         let contentLength = 0;
@@ -205,28 +187,38 @@ aboutDialog.querySelectorAll('a[href]').forEach(a => {
                 downloaded += event.data.chunkLength;
                 if (contentLength > 0) {
                   const pct = Math.round((downloaded / contentLength) * 100);
-                  progressFill.style.width = pct + '%';
-                  progressText.textContent = 'Downloading ' + pct + '% (' + formatBytes(downloaded) + ' / ' + formatBytes(contentLength) + ')';
+                  btnCheck.textContent = pct + '%';
                 } else {
-                  progressText.textContent = 'Downloading... ' + formatBytes(downloaded);
+                  btnCheck.textContent = 'Downloading...';
                 }
                 break;
               case 'Finished':
-                progressFill.style.width = '100%';
-                progressText.textContent = 'Download complete, installing...';
+                btnCheck.textContent = 'Installing...';
                 break;
             }
           });
 
-          progressText.textContent = 'Install complete, restarting...';
+          btnCheck.textContent = 'Restarting...';
           await relaunch();
         } catch (e) {
-          setStatus('Update failed: ' + e.message, 'error');
+          btnCheck.classList.remove('about-btn-downloading');
+          btnCheck.classList.add('about-btn-error');
+          btnCheck.disabled = false;
+          btnCheck.textContent = 'Failed';
+          setTimeout(resetBtn, 3000);
         }
-      });
+      }, { once: true });
+
     } catch (e) {
-      if (!silent) setStatus('Check failed: ' + e.message, 'error');
-      else clearStatus();
+      if (!silent) {
+        btnCheck.classList.remove('about-btn-checking');
+        btnCheck.classList.add('about-btn-error');
+        btnCheck.disabled = false;
+        btnCheck.textContent = 'Check failed';
+        setTimeout(resetBtn, 3000);
+      } else {
+        resetBtn();
+      }
     }
   }
 
