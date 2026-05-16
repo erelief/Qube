@@ -130,7 +130,7 @@ aboutDialog.querySelectorAll('a[href]').forEach(a => {
   async function checkForUpdate({ silent = false } = {}) {
     btnCheck.classList.add('about-btn-checking');
     btnCheck.disabled = true;
-    btnCheck.textContent = 'Checking...';
+    btnCheck.innerHTML = '<svg class="spin-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Checking...';
 
     try {
       const update = await check();
@@ -210,12 +210,14 @@ aboutDialog.querySelectorAll('a[href]').forEach(a => {
       }, { once: true });
 
     } catch (e) {
+      console.error('[Updater] check failed:', e);
       if (!silent) {
         btnCheck.classList.remove('about-btn-checking');
         btnCheck.classList.add('about-btn-error');
         btnCheck.disabled = false;
-        btnCheck.textContent = 'Check failed';
-        setTimeout(resetBtn, 3000);
+        const msg = e instanceof Error ? e.message : String(e);
+        btnCheck.textContent = msg ? 'Failed: ' + msg.slice(0, 30) : 'Check failed';
+        setTimeout(resetBtn, 4000);
       } else {
         resetBtn();
       }
